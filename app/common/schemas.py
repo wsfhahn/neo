@@ -1,10 +1,7 @@
 from __future__ import annotations
-
-from pydantic import BaseModel, Field
-from typing import Any
+from pydantic import BaseModel
 
 from app.common.literals import MessageJobStatus
-from app.chat.errors import InvalidMessageRequestError
 
 
 class InfoResponse(BaseModel):

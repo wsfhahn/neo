@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 from typing import Any
 
 from app.chat.errors import InvalidMessageRequestError

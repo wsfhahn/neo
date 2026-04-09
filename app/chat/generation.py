@@ -1,4 +1,3 @@
-from openai import OpenAI
 from openai.types.chat import ChatCompletionMessageParam
 
 from app.common.errors import GenerationError
