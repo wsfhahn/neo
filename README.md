@@ -6,6 +6,9 @@ This project is a server to handle your synthetic dataset generation needs. It i
 
 It uses the OpenAI completions API with a configurable base URL, so you can point it to any OpenAI compatible server you choose. You can even use it with local models, like I do.
 
+> [!CAUTION]
+> For generating queries, it is advisable to use a model that supports structured output. See Recommended Models.
+
 ## Getting Started
 
 This project uses `uv` for package management for simplicity and speed.

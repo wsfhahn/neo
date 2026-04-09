@@ -4,19 +4,14 @@ from uuid import UUID, uuid4
 from fastapi import FastAPI
 from typing import Literal
 
-from app.common.literals import MessageJobStatus, QueriesJobStatus
+from app.common.literals import MessageJobStatus, IterableJobStatus
+from app.common.types import JobType, JobRequestType
+from app.queries.schemas import QueriesGenerationJob
+from app.responses.schemas import ResponsesGenerationJob
 from app.common.schemas import (
     InfoResponse,
     JobScheduledResponse,
     JobsList
-)
-from app.chat.schemas import (
-    MessageJob,
-    MessageRequest
-)
-from app.queries.schemas import (
-    QueriesGenerationJob,
-    QueriesGenerationRequest
 )
 from app.common.errors import (
     AppError,
@@ -34,7 +29,8 @@ from app.common.jobs import (
 from app.common.file_utils import (
     save_job,
     load_job,
-    save_queries_jsonl
+    save_queries_job_jsonl,
+    save_responses_job_jsonl
 )
 
 
@@ -58,7 +54,7 @@ async def ping() -> InfoResponse:
 
 
 @app.post("/create", response_model=JobScheduledResponse)
-async def create_job(payload: MessageRequest | QueriesGenerationRequest) -> JobScheduledResponse:
+async def create_job(payload: JobRequestType) -> JobScheduledResponse:
     uuid = uuid4()
     async with job_lock:
         jobs[uuid] = payload.initialize_job()
@@ -70,8 +66,8 @@ async def create_job(payload: MessageRequest | QueriesGenerationRequest) -> JobS
     )
 
 
-@app.get("/job/{uuid_str}", response_model=MessageJob | QueriesGenerationJob)
-async def get_job(uuid_str: str) -> MessageJob | QueriesGenerationJob:
+@app.get("/job/{uuid_str}", response_model=JobType)
+async def get_job(uuid_str: str) -> JobType:
     try:
         uuid = UUID(uuid_str)
     except Exception:
@@ -88,7 +84,7 @@ async def get_job(uuid_str: str) -> MessageJob | QueriesGenerationJob:
 
 @app.get("/list", response_model=JobsList)
 async def list_jobs() -> JobsList:
-    job_statuses: dict[str, MessageJobStatus | QueriesJobStatus] = {}
+    job_statuses: dict[str, MessageJobStatus | IterableJobStatus] = {}
     for id, job in jobs.items():
         job_statuses[str(id)] = job.status
     
@@ -109,22 +105,27 @@ async def save_job_endpoint(
     
     async with job_lock:
         job = jobs.get(uuid)
-    if not job:
-        raise JobNotFoundError(uuid_str=uuid_str)
+        if not job:
+            raise JobNotFoundError(uuid_str=uuid_str)
     
-    if format == "json":
-        save_job(
-            job=job,
-            uuid=uuid
-        )
-    
-    if format == "jsonl":
-        if not isinstance(job, QueriesGenerationJob):
+        if format == "json":
+            save_job(
+                job=job,
+                uuid=uuid
+            )
+        
+        if format == "jsonl" and isinstance(job, QueriesGenerationJob):
+            save_queries_job_jsonl(
+                job=job,
+                uuid=uuid
+            )
+        elif format == "jsonl" and isinstance(job, ResponsesGenerationJob):
+            save_responses_job_jsonl(
+                job=job,
+                uuid=uuid
+            )
+        else:
             raise JobNotIterativeError(uuid_str=uuid_str)
-        save_queries_jsonl(
-            job=job,
-            uuid=uuid
-        )
 
     return InfoResponse(
         message=f"Successfully saved job '{uuid_str}'"
@@ -147,12 +148,8 @@ async def load_job_endpoint(uuid_str: str) -> InfoResponse:
             await job_queue.put(uuid)
             scheduled = True
     
-    if scheduled:
-        return InfoResponse(
-            message=f"Loaded job '{uuid_str}' and queued it for processing"
-        )
-    else:
-        return InfoResponse(
-            message=f"Loaded job '{uuid_str}'"
-        )
+    
+    return InfoResponse(
+        message=f"Loaded job '{uuid_str}' and queued it for processing" if scheduled else f"Loaded job '{uuid_str}'"
+    )
     

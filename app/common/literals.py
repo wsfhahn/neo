@@ -9,16 +9,7 @@ MessageJobStatus = Literal[
 ]
 
 
-QueriesJobStatus = Literal[
-    "pending",
-    "running",
-    "complete",
-    "error_stopped",
-    "error_continued"
-]
-
-
-ResponsesJobStatus = Literal[
+IterableJobStatus = Literal[
     "pending",
     "running",
     "complete",

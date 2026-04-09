@@ -1,7 +1,9 @@
 from typing import Union
 
-from app.queries.schemas import QueriesGenerationJob
-from app.chat.schemas import MessageJob
+from app.queries.schemas import QueriesGenerationJob, QueriesGenerationRequest
+from app.chat.schemas import MessageJob, MessageRequest
+from app.responses.schemas import ResponsesGenerationJob, ResponsesGenerationRequest
 
+JobType = Union[QueriesGenerationJob, MessageJob, ResponsesGenerationJob]
 
-JobType = Union[QueriesGenerationJob, MessageJob]
+JobRequestType = Union[QueriesGenerationRequest, MessageRequest, ResponsesGenerationRequest]

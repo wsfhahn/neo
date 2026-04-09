@@ -3,7 +3,7 @@ from __future__ import annotations
 from pydantic import BaseModel, Field
 from typing import Any, Literal
 
-from app.common.literals import QueriesJobStatus
+from app.common.literals import IterableJobStatus
 from app.queries.errors import InvalidQueriesRequestError
 
 
@@ -71,6 +71,6 @@ class QueriesGenerationRequest(BaseModel):
 
 
 class QueriesGenerationJob(QueriesGenerationRequest):
-    status: QueriesJobStatus
+    status: IterableJobStatus
     error_detail: str | None = None
     response: list[QueriesResponse] | None = None

@@ -1,13 +1,15 @@
 from uuid import UUID
+from typing import Iterator
 
 from app.common.types import JobType
 from app.queries.schemas import QueriesGenerationJob, QueriesJSONLEntry
-from app.queries.errors import ResponseEmptyError
+from app.responses.schemas import ResponsesGenerationJob
 from app.chat.schemas import MessageJob
 from app.common.config import GLOBAL_SETTINGS
 from app.common.errors import (
     FileNotFoundError,
-    CorruptedSaveFileError
+    CorruptedSaveFileError,
+    ResponseEmptyError
 )
 
 
@@ -34,6 +36,11 @@ def load_job(uuid_str: str) -> JobType:
         try:
             return QueriesGenerationJob.model_validate_json(data)
         except Exception:
+            pass
+
+        try:
+            return ResponsesGenerationJob.model_validate_json(data)
+        except Exception:
             raise CorruptedSaveFileError(path_str=path_str)
 
     load_path = GLOBAL_SETTINGS.save_dir / f"{uuid_str}.json"
@@ -45,11 +52,11 @@ def load_job(uuid_str: str) -> JobType:
     return validate_job_model(content, str(load_path))
 
 
-def save_queries_jsonl(
+def save_queries_job_jsonl(
     job: QueriesGenerationJob,
     uuid: UUID
 ) -> None:
-    """Save an iterative generation job to a JSONL file for big data operations."""
+    """Save a queries generation job to a JSONL file for big data operations."""
 
     if not job.response:
         raise ResponseEmptyError(uuid_str=str(uuid))
@@ -64,3 +71,30 @@ def save_queries_jsonl(
                     query=query.query
                 )
                 save_file.write(jsonl_entry.model_dump_json())
+
+
+def save_responses_job_jsonl(
+    job: ResponsesGenerationJob,
+    uuid: UUID
+) -> None:
+    """Save a responses generation job to JSONL for big data operations"""
+
+    if not job.response:
+        raise ResponseEmptyError(uuid_str=str(uuid))
+    save_path = GLOBAL_SETTINGS.save_dir / f"{str(uuid)}.jsonl"
+    with open(save_path, 'w') as save_file:
+        for response in job.response:
+            save_file.write(response.model_dump_json())
+
+
+def queries_jsonl_iterator(uuid: UUID) -> Iterator[QueriesJSONLEntry]:
+    load_path = GLOBAL_SETTINGS.save_dir / f"{str(uuid)}.jsonl"
+    if not load_path.exists():
+        raise FileNotFoundError(path_str=str(load_path))
+    with open(load_path, 'r') as load_file:
+        for entry in load_file.readlines():
+            try:
+                loaded = QueriesJSONLEntry.model_validate_json(entry)
+                yield loaded
+            except Exception:
+                raise CorruptedSaveFileError(path_str=str(load_path))
