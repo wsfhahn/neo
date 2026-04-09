@@ -1,9 +1,18 @@
 from typing import Literal
 
 
-JobStatus = Literal[
+MessageJobStatus = Literal[
     "pending",
     "running",
     "complete",
     "error"
+]
+
+
+QueriesJobStatus = Literal[
+    "pending",
+    "running",
+    "complete",
+    "error_stopped",
+    "error_continued"
 ]

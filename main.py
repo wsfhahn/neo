@@ -3,7 +3,7 @@ from asyncio import create_task
 from uuid import UUID, uuid4
 from fastapi import FastAPI
 
-from app.common.literals import JobStatus
+from app.common.literals import MessageJobStatus
 from app.common.schemas import (
     InfoResponse,
     JobScheduledResponse,
@@ -81,7 +81,7 @@ async def get_job(uuid_str: str) -> MessageJob:
 
 @app.get("/list", response_model=JobsList)
 async def list_jobs() -> JobsList:
-    job_statuses: dict[str, JobStatus] = {}
+    job_statuses: dict[str, MessageJobStatus] = {}
     for id, job in jobs.items():
         job_statuses[str(id)] = job.status
     

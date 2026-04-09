@@ -1,9 +1,9 @@
 from __future__ import annotations
 
 from pydantic import BaseModel, Field
-from typing import Any
+from typing import Any, Literal
 
-from app.common.literals import JobStatus
+from app.common.literals import QueriesJobStatus
 from app.queries.errors import InvalidQueriesRequestError
 
 
@@ -22,6 +22,7 @@ class QueriesGenerationRequest(BaseModel):
     categories: list[str]
     queries_per_category: int
     max_retries: int
+    on_error: Literal["continue", "stop"]
 
     def model_post_init(self, __context: Any) -> None:
         if len(self.categories) == 0:
@@ -46,6 +47,7 @@ class QueriesGenerationRequest(BaseModel):
             categories=self.categories,
             queries_per_category=self.queries_per_category,
             max_retries=self.max_retries,
+            on_error=self.on_error,
             status="pending",
             error_detail=None,
             response=None
@@ -53,6 +55,6 @@ class QueriesGenerationRequest(BaseModel):
 
 
 class QueriesGenerationJob(QueriesGenerationRequest):
-    status: JobStatus
+    status: QueriesJobStatus
     error_detail: str | None = None
-    response: ModelQueriesResponse | None = None
+    response: list[ModelQueriesResponse] | None = None

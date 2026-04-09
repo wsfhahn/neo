@@ -4,7 +4,7 @@ from pydantic import BaseModel, Field
 from typing import Any
 
 from app.chat.errors import InvalidMessageRequestError
-from app.common.literals import JobStatus
+from app.common.literals import MessageJobStatus
 
 
 class MessageRequest(BaseModel):
@@ -28,6 +28,6 @@ class MessageRequest(BaseModel):
 
 
 class MessageJob(MessageRequest):
-    status: JobStatus
+    status: MessageJobStatus
     error_detail: str | None = None
     response: str | None = None
