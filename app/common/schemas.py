@@ -1,7 +1,7 @@
 from __future__ import annotations
 from pydantic import BaseModel
 
-from app.common.literals import MessageJobStatus
+from app.common.literals import MessageJobStatus, QueriesJobStatus
 
 
 class InfoResponse(BaseModel):
@@ -14,4 +14,4 @@ class JobScheduledResponse(BaseModel):
 
 
 class JobsList(BaseModel):
-    jobs: dict[str, MessageJobStatus]
+    jobs: dict[str, MessageJobStatus | QueriesJobStatus]

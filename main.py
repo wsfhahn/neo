@@ -3,7 +3,7 @@ from asyncio import create_task
 from uuid import UUID, uuid4
 from fastapi import FastAPI
 
-from app.common.literals import MessageJobStatus
+from app.common.literals import MessageJobStatus, QueriesJobStatus
 from app.common.schemas import (
     InfoResponse,
     JobScheduledResponse,
@@ -12,6 +12,10 @@ from app.common.schemas import (
 from app.chat.schemas import (
     MessageJob,
     MessageRequest
+)
+from app.queries.schemas import (
+    QueriesGenerationJob,
+    QueriesGenerationRequest
 )
 from app.common.errors import (
     AppError,
@@ -51,7 +55,7 @@ async def ping() -> InfoResponse:
 
 
 @app.post("/create", response_model=JobScheduledResponse)
-async def create_job(payload: MessageRequest) -> JobScheduledResponse:
+async def create_job(payload: MessageRequest | QueriesGenerationJob) -> JobScheduledResponse:
     uuid = uuid4()
     async with job_lock:
         jobs[uuid] = payload.initialize_job()
@@ -63,11 +67,11 @@ async def create_job(payload: MessageRequest) -> JobScheduledResponse:
     )
 
 
-@app.get("/job/{uuid_str}", response_model=MessageJob)
-async def get_job(uuid_str: str) -> MessageJob:
+@app.get("/job/{uuid_str}", response_model=MessageJob | QueriesGenerationJob)
+async def get_job(uuid_str: str) -> MessageJob | QueriesGenerationJob:
     try:
         uuid = UUID(uuid_str)
-    except Exception as e:
+    except Exception:
         raise InvalidUUIDError(uuid_str=uuid_str)
 
     async with job_lock:
@@ -81,7 +85,7 @@ async def get_job(uuid_str: str) -> MessageJob:
 
 @app.get("/list", response_model=JobsList)
 async def list_jobs() -> JobsList:
-    job_statuses: dict[str, MessageJobStatus] = {}
+    job_statuses: dict[str, MessageJobStatus | QueriesJobStatus] = {}
     for id, job in jobs.items():
         job_statuses[str(id)] = job.status
     
