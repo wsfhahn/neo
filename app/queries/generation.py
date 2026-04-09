@@ -12,6 +12,8 @@ from app.queries.schemas import (
 
 
 def run_queries_job(job: QueriesGenerationJob) -> QueriesGenerationJob:
+    """Run a queries job and return the completed job."""
+
     output: list[QueriesResponse] = []
 
     for category in job.categories:

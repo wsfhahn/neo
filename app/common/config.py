@@ -17,6 +17,16 @@ from app.common.errors import (
 
 
 class Settings(BaseSettings):
+    """Global settings for the whole project.
+    
+    api_host: The URL of the OpenAI-compatible server used for completions.
+    model_id: The ID of the model. Must be a valid model known to the server.
+    save_idr: The directory to save and load jobs.
+    temperature: The temperature sampling parameter for generation.
+    top_k: Number of next possible tokens to be considered.
+    top_p: Nucleus sampling.
+    min_p: Minimum probability for a token to be considered."""
+
     api_host: str
     model_id: str
     save_dir: Path

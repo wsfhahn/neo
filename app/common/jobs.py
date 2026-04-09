@@ -14,6 +14,10 @@ job_lock = Lock()
 
 
 async def worker() -> None:
+    """The primary worker for the project.
+    
+    This worker scans a job queue, consuming the next pending job, kicking off processing, and storing the result."""
+
     while True:
         try:
             next_job_id = await job_queue.get()

@@ -5,7 +5,6 @@ from fastapi import FastAPI
 from typing import Literal
 
 from app.common.literals import MessageJobStatus, QueriesJobStatus
-from app.queries.errors import JobNotQueriesGenerationJobError
 from app.common.schemas import (
     InfoResponse,
     JobScheduledResponse,
@@ -23,7 +22,8 @@ from app.common.errors import (
     AppError,
     handle_app_error,
     InvalidUUIDError,
-    JobNotFoundError
+    JobNotFoundError,
+    JobNotIterativeError
 )
 from app.common.jobs import (
     jobs,
@@ -120,7 +120,7 @@ async def save_job_endpoint(
     
     if format == "jsonl":
         if not isinstance(job, QueriesGenerationJob):
-            raise JobNotQueriesGenerationJobError(uuid_str=uuid_str)
+            raise JobNotIterativeError(uuid_str=uuid_str)
         save_queries_jsonl(
             job=job,
             uuid=uuid

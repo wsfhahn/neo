@@ -8,6 +8,8 @@ from app.common.literals import MessageJobStatus
 
 
 class MessageRequest(BaseModel):
+    """Schema for a message request, used by the API for validating a request."""
+
     system: str | None = None
     user: str
 
@@ -28,6 +30,8 @@ class MessageRequest(BaseModel):
 
 
 class MessageJob(MessageRequest):
+    """A message job, which inherits MessageQuest and adds fields necessary for processing."""
+
     status: MessageJobStatus
     error_detail: str | None = None
     response: str | None = None

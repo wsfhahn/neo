@@ -15,12 +15,16 @@ def save_job(
     job: JobType,
     uuid: UUID
 ) -> None:
+    """Save a job to a .json file named by the UUID."""
+
     save_path = GLOBAL_SETTINGS.save_dir / f"{str(uuid)}.json"
     with open(save_path, 'w') as save_file:
         save_file.write(job.model_dump_json(indent=2))
 
 
 def load_job(uuid_str: str) -> JobType:
+    """Load a job from a .json file by the UUID."""
+
     def validate_job_model(data: str, path_str: str) -> JobType:
         try:
             return MessageJob.model_validate_json(data)
@@ -45,6 +49,8 @@ def save_queries_jsonl(
     job: QueriesGenerationJob,
     uuid: UUID
 ) -> None:
+    """Save an iterative generation job to a JSONL file for big data operations."""
+
     if not job.response:
         raise ResponseEmptyError(uuid_str=str(uuid))
     save_path = GLOBAL_SETTINGS.save_dir / f"{str(UUID)}.jsonl"

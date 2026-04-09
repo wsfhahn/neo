@@ -12,6 +12,7 @@ from app.responses.errors import JSONLQueriesFileNotFoundError
 
 
 class ResponsesResponse(BaseModel):
+    """Response from the model answering a query during a responses generation job."""
     number: str
     category: str
     query: str
@@ -19,6 +20,8 @@ class ResponsesResponse(BaseModel):
 
 
 class ResponsesGenerationJobRequest(BaseModel):
+    """A request from the client to start a responses generation job."""
+
     system: str | None = None
     uuid_str: str
     responses_per_query: int

@@ -19,17 +19,21 @@ class ModelQueriesResponse(BaseModel):
 
 
 class QueriesResponse(BaseModel):
+    """A queries response to return to a client."""
     category: str
     queries: list[ModelQueryResponse]
 
 
 class QueriesJSONLEntry(BaseModel):
+    """A JSONL entry for a query."""
     category: str
     number: int
     query: str
 
 
 class QueriesGenerationRequest(BaseModel):
+    """A request to generate a query, sent by the client."""
+
     categories: list[str]
     queries_per_category: int
     max_retries: int

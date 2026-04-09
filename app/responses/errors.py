@@ -2,6 +2,8 @@ from app.common.errors import AppError
 
 
 class JSONLQueriesFileNotFoundError(AppError):
+    """The JSONL file for the specified saved queries job could not be found."""
+
     status_code = 404
 
     def __init__(self, uuid_str: str):

@@ -9,6 +9,8 @@ from app.common.config import (
 
 
 def run_message_job(job: MessageJob) -> MessageJob:
+    """Process a MessageJob and return the completed job."""
+
     system = job.system
     user = job.user
 
