@@ -1,8 +1,8 @@
 from uuid import UUID
-from pydantic import ValidationError
 
 from app.common.types import JobType
-from app.queries.schemas import QueriesGenerationJob
+from app.queries.schemas import QueriesGenerationJob, QueriesJSONLEntry
+from app.queries.errors import ResponseEmptyError
 from app.chat.schemas import MessageJob
 from app.common.config import GLOBAL_SETTINGS
 from app.common.errors import (
@@ -39,3 +39,22 @@ def load_job(uuid_str: str) -> JobType:
         content = load_file.read()
     
     return validate_job_model(content, str(load_path))
+
+
+def save_queries_jsonl(
+    job: QueriesGenerationJob,
+    uuid: UUID
+) -> None:
+    if not job.response:
+        raise ResponseEmptyError(uuid_str=str(uuid))
+    save_path = GLOBAL_SETTINGS.save_dir / f"{str(UUID)}.jsonl"
+    with open(save_path, 'w') as save_file:
+        for response in job.response:
+            category = response.category
+            for query in response.queries:
+                jsonl_entry = QueriesJSONLEntry(
+                    category=category,
+                    number=query.number,
+                    query=query.query
+                )
+                save_file.write(jsonl_entry.model_dump_json())

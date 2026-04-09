@@ -23,6 +23,12 @@ class QueriesResponse(BaseModel):
     queries: list[ModelQueryResponse]
 
 
+class QueriesJSONLEntry(BaseModel):
+    category: str
+    number: int
+    query: str
+
+
 class QueriesGenerationRequest(BaseModel):
     categories: list[str]
     queries_per_category: int

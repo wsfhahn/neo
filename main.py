@@ -2,8 +2,10 @@ from contextlib import asynccontextmanager
 from asyncio import create_task
 from uuid import UUID, uuid4
 from fastapi import FastAPI
+from typing import Literal
 
 from app.common.literals import MessageJobStatus, QueriesJobStatus
+from app.queries.errors import JobNotQueriesGenerationJobError
 from app.common.schemas import (
     InfoResponse,
     JobScheduledResponse,
@@ -31,7 +33,8 @@ from app.common.jobs import (
 )
 from app.common.file_utils import (
     save_job,
-    load_job
+    load_job,
+    save_queries_jsonl
 )
 
 
@@ -94,8 +97,11 @@ async def list_jobs() -> JobsList:
     )
 
 
-@app.get("/job/{uuid_str}/save", response_model=InfoResponse)
-async def save_job_endpoint(uuid_str: str) -> InfoResponse:
+@app.get("/job/{uuid_str}/save/{format}", response_model=InfoResponse)
+async def save_job_endpoint(
+    uuid_str: str,
+    format: Literal["json", "jsonl"]
+) -> InfoResponse:
     try:
         uuid = UUID(uuid_str)
     except Exception as e:
@@ -106,10 +112,19 @@ async def save_job_endpoint(uuid_str: str) -> InfoResponse:
     if not job:
         raise JobNotFoundError(uuid_str=uuid_str)
     
-    save_job(
-        job=job,
-        uuid=uuid
-    )
+    if format == "json":
+        save_job(
+            job=job,
+            uuid=uuid
+        )
+    
+    if format == "jsonl":
+        if not isinstance(job, QueriesGenerationJob):
+            raise JobNotQueriesGenerationJobError(uuid_str=uuid_str)
+        save_queries_jsonl(
+            job=job,
+            uuid=uuid
+        )
 
     return InfoResponse(
         message=f"Successfully saved job '{uuid_str}'"

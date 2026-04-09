@@ -16,3 +16,12 @@ QueriesJobStatus = Literal[
     "error_stopped",
     "error_continued"
 ]
+
+
+ResponsesJobStatus = Literal[
+    "pending",
+    "running",
+    "complete",
+    "error_stopped",
+    "error_continued"
+]
