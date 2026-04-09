@@ -6,12 +6,13 @@ from app.common.config import GLOBAL_CLIENT, GLOBAL_SETTINGS
 from app.queries.prompts import QUERY_GENERATOR_SYSTEM_PROMPT
 from app.queries.schemas import (
     ModelQueriesResponse,
-    QueriesGenerationJob
+    QueriesGenerationJob,
+    QueriesResponse
 )
 
 
 def run_queries_job(job: QueriesGenerationJob) -> QueriesGenerationJob:
-    output: list[ModelQueriesResponse] = []
+    output: list[QueriesResponse] = []
 
     for category in job.categories:
         chat: list[ChatCompletionMessageParam] = [
@@ -54,7 +55,11 @@ def run_queries_job(job: QueriesGenerationJob) -> QueriesGenerationJob:
                     raise GenerationError(
                         reason=f"model failed to adhere to output schema: {e}"
                     )
-                output.append(loaded)
+                output.append(QueriesResponse(
+                    category=category,
+                    queries=loaded.queries
+                ))
+                break
             except Exception as e:
                 if retry < job.max_retries:
                     retry += 1

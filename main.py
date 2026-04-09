@@ -55,7 +55,7 @@ async def ping() -> InfoResponse:
 
 
 @app.post("/create", response_model=JobScheduledResponse)
-async def create_job(payload: MessageRequest | QueriesGenerationJob) -> JobScheduledResponse:
+async def create_job(payload: MessageRequest | QueriesGenerationRequest) -> JobScheduledResponse:
     uuid = uuid4()
     async with job_lock:
         jobs[uuid] = payload.initialize_job()

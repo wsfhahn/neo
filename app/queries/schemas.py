@@ -18,6 +18,11 @@ class ModelQueriesResponse(BaseModel):
     queries: list[ModelQueryResponse] = Field(..., description="The list of queries")
 
 
+class QueriesResponse(BaseModel):
+    category: str
+    queries: list[ModelQueryResponse]
+
+
 class QueriesGenerationRequest(BaseModel):
     categories: list[str]
     queries_per_category: int
@@ -29,10 +34,6 @@ class QueriesGenerationRequest(BaseModel):
             raise InvalidQueriesRequestError(
                 reason="len(categories) cannot be 0"
             )
-        elif any([len(c) == 0] for c in self.categories):
-            raise InvalidQueriesRequestError(
-                reason="found a blank category in categories"
-            )
         elif self.queries_per_category <= 0 or self.queries_per_category > 100:
             raise InvalidQueriesRequestError(
                 reason="queries per category must be > 0 and <= 100"
@@ -41,6 +42,11 @@ class QueriesGenerationRequest(BaseModel):
             raise InvalidQueriesRequestError(
                 reason="max_retries must be >=0 and <=10"
             )
+        for c in self.categories:
+            if len(c) == 0:
+                raise InvalidQueriesRequestError(
+                    reason="found a blank category"
+                )
     
     def initialize_job(self) -> QueriesGenerationJob:
         return QueriesGenerationJob(
@@ -57,4 +63,4 @@ class QueriesGenerationRequest(BaseModel):
 class QueriesGenerationJob(QueriesGenerationRequest):
     status: QueriesJobStatus
     error_detail: str | None = None
-    response: list[ModelQueriesResponse] | None = None
+    response: list[QueriesResponse] | None = None
