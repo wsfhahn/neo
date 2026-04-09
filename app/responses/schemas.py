@@ -15,12 +15,14 @@ class ResponsesResponse(BaseModel):
     number: str
     category: str
     query: str
-    content: str
+    content: list[str]
 
 
 class ResponsesGenerationJobRequest(BaseModel):
-    system: str
+    system: str | None = None
     uuid_str: str
+    responses_per_query: int
+    max_retries: int
     on_error: Literal["continue", "stop"]
 
     def model_post_init(self, __context: Any) -> None:
@@ -37,6 +39,8 @@ class ResponsesGenerationJobRequest(BaseModel):
         return ResponsesGenerationJob(
             system=self.system,
             uuid_str=self.uuid_str,
+            responses_per_query=self.responses_per_query,
+            max_retries=self.max_retries,
             on_error=self.on_error,
             status="pending",
             error_detail=None,
