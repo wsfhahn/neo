@@ -7,7 +7,7 @@ This project is a server to handle your synthetic dataset generation needs. It i
 It uses the OpenAI completions API with a configurable base URL, so you can point it to any OpenAI compatible server you choose. You can even use it with local models, like I do.
 
 > [!CAUTION]
-> For generating queries, it is advisable to use a model that supports structured output. See Recommended Models.
+> For generating queries, it is advisable to use a model that supports structured output. See [Recommended Models](#recommended-models).
 
 ## Getting Started
 
@@ -176,3 +176,13 @@ class ResponsesGenerationJob(BaseModel):
     error_detail: str | None  = None
     response: list[ResponsesResponse] | None = None
 ```
+
+## Recommended Models
+
+Beyond the closed models from major labs, I have found success using the following models:
+
+- Gemma 4 31B Instruct
+- Gemma 4 26B A4B Instruct
+- Gemma 3 27B
+- Qwen3.5 35B A3B
+- Qwen3.5 27B
