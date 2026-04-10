@@ -15,11 +15,11 @@ from app.common.errors import (
 
 def save_job(
     job: JobType,
-    uuid: UUID
+    job_uuid: UUID
 ) -> None:
     """Save a job to a .json file named by the UUID."""
 
-    save_path = GLOBAL_SETTINGS.save_dir / f"{str(uuid)}.json"
+    save_path = GLOBAL_SETTINGS.save_dir / f"{str(job_uuid)}.json"
     with open(save_path, 'w') as save_file:
         save_file.write(job.model_dump_json(indent=2))
 
@@ -54,13 +54,13 @@ def load_job(uuid_str: str) -> JobType:
 
 def save_queries_job_jsonl(
     job: QueriesGenerationJob,
-    uuid: UUID
+    job_uuid: UUID
 ) -> None:
     """Save a queries generation job to a JSONL file for big data operations."""
 
     if not job.response:
-        raise ResponseEmptyError(uuid_str=str(uuid))
-    save_path = GLOBAL_SETTINGS.save_dir / f"{str(UUID)}.jsonl"
+        raise ResponseEmptyError(uuid_str=str(job_uuid))
+    save_path = GLOBAL_SETTINGS.save_dir / f"{str(job_uuid)}.jsonl"
     with open(save_path, 'w') as save_file:
         for response in job.response:
             category = response.category
@@ -70,25 +70,25 @@ def save_queries_job_jsonl(
                     number=query.number,
                     query=query.query
                 )
-                save_file.write(jsonl_entry.model_dump_json())
+                save_file.write(jsonl_entry.model_dump_json() + "\n")
 
 
 def save_responses_job_jsonl(
     job: ResponsesGenerationJob,
-    uuid: UUID
+    job_uuid: UUID
 ) -> None:
     """Save a responses generation job to JSONL for big data operations"""
 
     if not job.response:
-        raise ResponseEmptyError(uuid_str=str(uuid))
-    save_path = GLOBAL_SETTINGS.save_dir / f"{str(uuid)}.jsonl"
+        raise ResponseEmptyError(uuid_str=str(job_uuid))
+    save_path = GLOBAL_SETTINGS.save_dir / f"{str(job_uuid)}.jsonl"
     with open(save_path, 'w') as save_file:
         for response in job.response:
-            save_file.write(response.model_dump_json())
+            save_file.write(response.model_dump_json() + "\n")
 
 
-def queries_jsonl_iterator(uuid: UUID) -> Iterator[QueriesJSONLEntry]:
-    load_path = GLOBAL_SETTINGS.save_dir / f"{str(uuid)}.jsonl"
+def queries_jsonl_iterator(job_uuid: UUID) -> Iterator[QueriesJSONLEntry]:
+    load_path = GLOBAL_SETTINGS.save_dir / f"{str(job_uuid)}.jsonl"
     if not load_path.exists():
         raise FileNotFoundError(path_str=str(load_path))
     with open(load_path, 'r') as load_file:

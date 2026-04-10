@@ -111,18 +111,17 @@ async def save_job_endpoint(
         if format == "json":
             save_job(
                 job=job,
-                uuid=uuid
+                job_uuid=uuid
             )
-        
-        if format == "jsonl" and isinstance(job, QueriesGenerationJob):
+        elif format == "jsonl" and isinstance(job, QueriesGenerationJob):
             save_queries_job_jsonl(
                 job=job,
-                uuid=uuid
+                job_uuid=uuid
             )
         elif format == "jsonl" and isinstance(job, ResponsesGenerationJob):
             save_responses_job_jsonl(
                 job=job,
-                uuid=uuid
+                job_uuid=uuid
             )
         else:
             raise JobNotIterativeError(uuid_str=uuid_str)
