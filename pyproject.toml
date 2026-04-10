@@ -1,7 +1,7 @@
 [project]
-name = "synthetic-data-generator-neo"
+name = "neo"
 version = "0.1.0"
-description = "Add your description here"
+description = "Synthetic data generation for the home"
 readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [
