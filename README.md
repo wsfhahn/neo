@@ -9,6 +9,16 @@ It uses the OpenAI completions API with a configurable base URL, so you can poin
 > [!CAUTION]
 > For generating queries, it is advisable to use a model that supports structured output. See [Recommended Models](#recommended-models).
 
+## Contents
+- [Getting Started](#getting-started)
+- [Spec](#spec)
+    - [Job Types](#job-types)
+    - [Job Statuses](#job-statuses)
+    - [Listing Jobs](#listing-jobs)
+    - [Retrieving Jobs](#retrieving-jobs)
+    - [Saving and Loading](#saving-and-loading)
+- [Recommended Models](#recommended-models)
+
 ## Getting Started
 
 This project uses `uv` for package management for simplicity and speed.
@@ -55,45 +65,19 @@ Below is the spec for the server, which you can use to develop a web UI, REPL, o
 
 ### Job Types
 
----
-
 This project uses a worker and a queue to process jobs asynchronously. Thus far, there are three types of supported jobs (with more likely to come in the future).
-
-Each job has a `status` field. Depending on the type of job, the `status` can be one of the following:
-
-Statuses:
-- `pending`
-    - A job is `pending` when it is in the queue, but not yet processing.
-    - Applies to: `MessageJob`, `QueriesGenerationJob`, `ResponsesGenerationJob`
-- `running`
-    - Intuitively, a job is `running` when it is actively being processed.
-    - Applies to: `MessageJob`, `QueriesGenerationJob`, `ResponsesGenerationJob`
-- `complete`
-    - The job is finished running.
-    - Applies to: `MessageJob`, `QueriesGenerationJob`, `ResponsesGenerationJob`
-- `error`
-    - An error was encountered while processing. The `error_detail` field has been populated with more detail.
-    - Applies to: `MessageJob`
-- `error_stopped`
-    - An error was encountered while processing, and the job was stopped. The `error_detail` field has been populated.
-    - Applies to: `QueriesGenerationJob`, `ResponsesGenerationJob`
-- `error_continued`
-    - An error was encountered while processing, and the job skipped the current entry, continuing to the next items.
-    - Applies to: `QueriesGenerationJob`, `ResponsesGenerationJob`
-
-By sending the following request to the server, a job can be saved to disk. This is recommended if you intend to restart the server, and would not like to lose a queued or finished long-running job.
-
-`GET http://{BASE_URL}:{PORT}/job/{UUID}/save/{FORMAT}`
-
-The possible formats are `JSON` and `JSONL`. All jobs can be saved as `JSON`. Only iterative jobs (`QueriesGenerationJob` and `ResponsesGenerationJob`) can be saved as `JSONL`. `JSONL` should be used for big data operations, such as generating responses on the result of a `QueriesGenerationJob`.
-
-Note that since `JSONL` saving is lossy, and does not include fields such as the `status` and `error_detail`, jobs can only be loaded from `JSON` format files. Jobs can be saved as both formats, and they will not conflict with one another.
-
-Below can be found the specifics of each type of job, as well as how to kick them off.
 
 **`MessageJob`:**
 
 A `MessageJob` should be used to send a single message to the model, optionally along with a system prompt. The model will respond to the message, and the result will be stored in memory.
+
+The model for a `MessageRequest` is:
+
+```py
+class MessageRequest(BaseModel):
+    system: str
+    user: str
+```
 
 The internal model for a `MessageJob` is:
 
@@ -123,6 +107,16 @@ With this request, you must include the following JSON body:
 
 A `QueriesGenerationJob` is used to generate a set of queries, which emulate queries which may be submitted to a real chatbot by a user.
 
+Requests are validated against `QueriesGenerationRequest`:
+
+```py
+class QueriesGenerationRequest(BaseModel):
+    categories: list[str]
+    queries_per_category: int
+    max_retries: int
+    on_error: Literal["continue", "stop"]
+```
+
 Below is the internal model used for `QueriesGenerationJob`:
 
 ```py
@@ -131,7 +125,7 @@ class QueriesGenerationJob(BaseModel):
     queries_per_category: int
     max_retries: int
     on_error: Literal["continue", "stop"]
-    status: QueriesJobStatus,
+    status: IterableJobStatus,
     error_detail: str | None = None,
     response: list[QueriesResponse] | None = None
 ```
@@ -175,6 +169,79 @@ class ResponsesGenerationJob(BaseModel):
     status: ResponsesJobStatus
     error_detail: str | None  = None
     response: list[ResponsesResponse] | None = None
+```
+
+### Job Statuses
+
+Each job has a `status` field. Depending on the type of job, the `status` can be one of the following:
+
+Statuses:
+- `pending`
+    - A job is `pending` when it is in the queue, but not yet processing.
+    - Applies to: `MessageJob`, `QueriesGenerationJob`, `ResponsesGenerationJob`
+- `running`
+    - Intuitively, a job is `running` when it is actively being processed.
+    - Applies to: `MessageJob`, `QueriesGenerationJob`, `ResponsesGenerationJob`
+- `complete`
+    - The job is finished running.
+    - Applies to: `MessageJob`, `QueriesGenerationJob`, `ResponsesGenerationJob`
+- `error`
+    - An error was encountered while processing. The `error_detail` field has been populated with more detail.
+    - Applies to: `MessageJob`
+- `error_stopped`
+    - An error was encountered while processing, and the job was stopped. The `error_detail` field has been populated.
+    - Applies to: `QueriesGenerationJob`, `ResponsesGenerationJob`
+- `error_continued`
+    - An error was encountered while processing, and the job skipped the current entry, continuing to the next items.
+    - Applies to: `QueriesGenerationJob`, `ResponsesGenerationJob`
+
+### Listing Jobs
+
+To poll the statuses of many jobs at once, it may be preferable to list all of the jobs in memory. In order to list them all, hit the endpoint:
+
+```
+GET http://{BASE_URL}:{PORT}/list 
+```
+
+### Retrieving Jobs
+
+If you wish to retrieve a job and view its contents without inspecting your save folder in your server instance, fear not! Use the following endpoint to retrieve a job from memory:
+
+```
+GET http://{BASE_URL}:{PORT}/job/{JOB_UUID}
+```
+
+### Saving and Loading
+
+> [!CAUTION]
+> JSONL job saving is only intended for big-data operations and export, and a job cannot be loaded from JSONL back into memory. To store a job for persistence, save it is JSON.
+
+By default, jobs are stored in memory. However, if your instance of this server is not always-on, or you have particularly valuable, long-running jobs, you may choose to save them to disk.
+
+Generating responses to queries generated by this server is considered a **Big Data Operation**. In this case, you must save your job as JSONL. For convenience, a responses generation job can then be created using the UUID of the queries generation job which has been saved as JSONL.
+
+**Supported job saving formats:**:
+- `MessageJob`:
+    - `json`
+- `QueriesGenerationJob`:
+    - `json` (for persistence)
+    - `jsonl` (for big-data operations)
+- `ResponsesGenerationJob`:
+    - `json` (for persistence)
+    - `jsonl` (for big-data operations)
+
+The endpoint for saving jobs is as follows:
+
+```
+GET http://{BASE_URL}:{PORT}/job/{JOB_UUID}/save/{FORMAT}
+```
+
+The format must be either `json`, or `jsonl`.
+
+If you have previously saved a job to disk, and wish to load it back into memory for any reason, hit the load endpoint:
+
+```
+GET http://{BASE_URL}:{PORT}/job/{JOB_UUID}/load
 ```
 
 ## Recommended Models
