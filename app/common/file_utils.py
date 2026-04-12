@@ -4,7 +4,6 @@ from typing import Iterator
 from app.common.types import JobType
 from app.queries.schemas import QueriesGenerationJob, QueriesJSONLEntry
 from app.responses.schemas import ResponsesGenerationJob
-from app.chat.schemas import MessageJob
 from app.common.config import GLOBAL_SETTINGS
 from app.common.errors import (
     FileNotFoundError,
@@ -28,11 +27,6 @@ def load_job(uuid_str: str) -> JobType:
     """Load a job from a .json file by the UUID."""
 
     def validate_job_model(data: str, path_str: str) -> JobType:
-        try:
-            return MessageJob.model_validate_json(data)
-        except Exception:
-            pass
-
         try:
             return QueriesGenerationJob.model_validate_json(data)
         except Exception:
@@ -66,25 +60,12 @@ def save_queries_job_jsonl(
             category = response.category
             for query in response.queries:
                 jsonl_entry = QueriesJSONLEntry(
+                    model_id=job.model_id,
                     category=category,
                     number=query.number,
                     query=query.query
                 )
                 save_file.write(jsonl_entry.model_dump_json() + "\n")
-
-
-def save_responses_job_jsonl(
-    job: ResponsesGenerationJob,
-    job_uuid: UUID
-) -> None:
-    """Save a responses generation job to JSONL for big data operations"""
-
-    if not job.response:
-        raise ResponseEmptyError(uuid_str=str(job_uuid))
-    save_path = GLOBAL_SETTINGS.save_dir / f"{str(job_uuid)}.jsonl"
-    with open(save_path, 'w') as save_file:
-        for response in job.response:
-            save_file.write(response.model_dump_json() + "\n")
 
 
 def queries_jsonl_iterator(job_uuid: UUID) -> Iterator[QueriesJSONLEntry]:

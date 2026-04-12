@@ -1,10 +1,13 @@
 from __future__ import annotations
 
+from uuid import UUID
 from pydantic import BaseModel, Field
 from typing import Any, Literal
 
 from app.common.literals import IterableJobStatus
 from app.queries.errors import InvalidQueriesRequestError
+from app.common.config import GLOBAL_SETTINGS, GLOBAL_CLIENT
+from app.common.errors import InvalidModelIDError, ResponseEmptyError
 
 
 class ModelQueryResponse(BaseModel):
@@ -26,6 +29,7 @@ class QueriesResponse(BaseModel):
 
 class QueriesJSONLEntry(BaseModel):
     """A JSONL entry for a query."""
+    model_id: str
     category: str
     number: int
     query: str
@@ -38,25 +42,32 @@ class QueriesGenerationRequest(BaseModel):
     queries_per_category: int
     max_retries: int
     on_error: Literal["continue", "stop"]
+    model_id: str | None = None
 
     def model_post_init(self, __context: Any) -> None:
         if len(self.categories) == 0:
             raise InvalidQueriesRequestError(
                 reason="len(categories) cannot be 0"
             )
-        elif self.queries_per_category <= 0 or self.queries_per_category > 100:
+        
+        if self.queries_per_category <= 0 or self.queries_per_category > 100:
             raise InvalidQueriesRequestError(
                 reason="queries per category must be > 0 and <= 100"
             )
-        elif self.max_retries < 0 or self.max_retries > 10:
+        
+        if self.max_retries < 0 or self.max_retries > 10:
             raise InvalidQueriesRequestError(
                 reason="max_retries must be >=0 and <=10"
             )
+        
         for c in self.categories:
             if len(c) == 0:
                 raise InvalidQueriesRequestError(
                     reason="found a blank category"
                 )
+
+        if self.model_id and self.model_id not in [m.id for m in GLOBAL_CLIENT.models.list()]:
+                raise InvalidModelIDError(self.model_id)
     
     def initialize_job(self) -> QueriesGenerationJob:
         return QueriesGenerationJob(
@@ -64,6 +75,7 @@ class QueriesGenerationRequest(BaseModel):
             queries_per_category=self.queries_per_category,
             max_retries=self.max_retries,
             on_error=self.on_error,
+            model_id=self.model_id if self.model_id else GLOBAL_SETTINGS.model_id,
             status="pending",
             error_detail=None,
             response=None
@@ -71,6 +83,20 @@ class QueriesGenerationRequest(BaseModel):
 
 
 class QueriesGenerationJob(QueriesGenerationRequest):
+    model_id: str
     status: IterableJobStatus
     error_detail: str | None = None
     response: list[QueriesResponse] | None = None
+
+    def save(
+        self,
+        uuid: UUID
+    ) -> None:
+        json_path = GLOBAL_SETTINGS.save_dir / f"{str(uuid)}.json"
+        jsonl_path = GLOBAL_SETTINGS.save_dir / f"{str(uuid)}.jsonl"
+        with open(json_path, 'w') as json_file:
+            json_file.write(self.model_dump_json(indent=2))
+        if not self.response: return
+        with open(jsonl_path, 'w') as jsonl_file:
+            for r in self.response:
+                jsonl_file.write

@@ -28,7 +28,7 @@ def run_responses_job(job: ResponsesGenerationJob) -> ResponsesGenerationJob:
             try:
                 raw_response = GLOBAL_CLIENT.chat.completions.create(
                     messages=chat,
-                    model=GLOBAL_SETTINGS.model_id,
+                    model=job.model_id,
                     temperature=GLOBAL_SETTINGS.temperature,
                     extra_body={
                         "top_k": GLOBAL_SETTINGS.top_k,
@@ -67,6 +67,7 @@ def run_responses_job(job: ResponsesGenerationJob) -> ResponsesGenerationJob:
                         queries_uuid_str=job.queries_uuid_str,
                         max_retries=job.max_retries,
                         on_error=job.on_error,
+                        model_id=job.model_id,
                         status="error_stopped",
                         error_detail=str(e),
                         response=output
@@ -80,6 +81,7 @@ def run_responses_job(job: ResponsesGenerationJob) -> ResponsesGenerationJob:
         queries_uuid_str=job.queries_uuid_str,
         max_retries=job.max_retries,
         on_error=job.on_error,
+        model_id=job.model_id,
         status="error_continued" if error_detail else "complete",
         error_detail=error_detail,
         response=output

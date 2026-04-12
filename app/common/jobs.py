@@ -1,11 +1,9 @@
 from asyncio import Queue, Lock, to_thread
 from uuid import UUID
 
-from app.chat.schemas import MessageJob
 from app.queries.schemas import QueriesGenerationJob
 from app.responses.schemas import ResponsesGenerationJob
 from app.common.types import JobType
-from app.chat.generation import run_message_job
 from app.queries.generation import run_queries_job
 from app.responses.generation import run_responses_job
 
@@ -30,10 +28,8 @@ async def worker() -> None:
                 job = jobs[next_job_id]
                 job.status = "running"
             
-            if isinstance(job, MessageJob):
-                result: JobType = await to_thread(run_message_job, job)
-            elif isinstance(job, QueriesGenerationJob):
-                result = await to_thread(run_queries_job, job)
+            if isinstance(job, QueriesGenerationJob):
+                result: JobType = await to_thread(run_queries_job, job)
             elif isinstance(job, ResponsesGenerationJob):
                 result = await to_thread(run_responses_job, job)
 

@@ -6,6 +6,7 @@ from typing import Literal
 
 from app.common.literals import MessageJobStatus, IterableJobStatus
 from app.common.types import JobType, JobRequestType
+from app.common.file_utils import load_job
 from app.queries.schemas import QueriesGenerationJob
 from app.responses.schemas import ResponsesGenerationJob
 from app.common.schemas import (
@@ -25,12 +26,6 @@ from app.common.jobs import (
     job_queue,
     job_lock,
     worker
-)
-from app.common.file_utils import (
-    save_job,
-    load_job,
-    save_queries_job_jsonl,
-    save_responses_job_jsonl
 )
 
 
