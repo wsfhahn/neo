@@ -5,50 +5,35 @@ from app.responses.schemas import ResponsesGenerationJob, ResponsesResponse
 from app.common.file_utils import queries_jsonl_iterator
 from app.common.config import GLOBAL_SETTINGS, GLOBAL_CLIENT
 from app.common.errors import GenerationError
+from app.common.literals import IterableJobStatus
+from app.common.generation import generate_response
 
 
 def run_responses_job(job: ResponsesGenerationJob) -> ResponsesGenerationJob:
     output: list[ResponsesResponse] = []
-
     error_detail: str | None = None
-
+    def _to_job(stopped: bool = False) -> ResponsesGenerationJob:
+        if stopped: status: IterableJobStatus = "error_stopped"
+        elif error_detail: status = "error_continued"
+        else: status = "complete"
+        return ResponsesGenerationJob(
+            system=job.system,
+            queries_uuid_str=job.queries_uuid_str,
+            max_retries=job.max_retries,
+            on_error=job.on_error,
+            model_id=job.model_id,
+            status=status,
+            error_detail=error_detail,
+            response=output if len(output) != 0 else None
+        )
     for query in queries_jsonl_iterator(UUID(job.queries_uuid_str)):
-        if job.system:
-            chat: list[ChatCompletionMessageParam] = [
-                {"role": "system", "content": job.system},
-                {"role": "user", "content": query.query}
-            ]
-        else:
-            chat = [
-                {"role": "user", "content": query.query}
-            ]
-        
         retry = 0
         while True:
             try:
-                raw_response = GLOBAL_CLIENT.chat.completions.create(
-                    messages=chat,
-                    model=job.model_id,
-                    temperature=GLOBAL_SETTINGS.temperature,
-                    extra_body={
-                        "top_k": GLOBAL_SETTINGS.top_k,
-                        "top_p": GLOBAL_SETTINGS.top_p,
-                        "min_p": GLOBAL_SETTINGS.min_p
-                    }
+                response = generate_response(
+                    user_message=query.query
                 )
-
-                response = raw_response.choices[0].message.content
-                refusal = raw_response.choices[0].message.refusal
-
-                if not response:
-                    if refusal:
-                        raise GenerationError(
-                            reason=f"response refusal for query: {query.query}"
-                        )
-                    raise GenerationError(
-                        reason=f"model returned empty message for query: {query.query}"
-                    )
-                
+                assert isinstance(response, str)
                 output.append(ResponsesResponse(
                     number=query.number,
                     category=query.category,
@@ -60,29 +45,11 @@ def run_responses_job(job: ResponsesGenerationJob) -> ResponsesGenerationJob:
                 if retry < job.max_retries:
                     retry += 1
                     continue
-
                 if job.on_error == "stop":
-                    return ResponsesGenerationJob(
-                        system=job.system,
-                        queries_uuid_str=job.queries_uuid_str,
-                        max_retries=job.max_retries,
-                        on_error=job.on_error,
-                        model_id=job.model_id,
-                        status="error_stopped",
-                        error_detail=str(e),
-                        response=output
-                    )
-                elif job.on_error == "continue":
+                    error_detail = str(e)
+                    return _to_job(stopped=True)
+                if job.on_error == "continue":
                     error_detail = str(e)
                     break
     
-    return ResponsesGenerationJob(
-        system=job.system,
-        queries_uuid_str=job.queries_uuid_str,
-        max_retries=job.max_retries,
-        on_error=job.on_error,
-        model_id=job.model_id,
-        status="error_continued" if error_detail else "complete",
-        error_detail=error_detail,
-        response=output
-    )
+    return _to_job()

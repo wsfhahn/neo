@@ -26,7 +26,6 @@ class ResponsesResponse(BaseModel):
 
 class ResponsesJSONEntry(BaseModel):
     """An entry for saving responses as JSONL."""
-    queries_model_id: str
     responses_model_id: str
     number: int
     category: str
@@ -79,14 +78,22 @@ class ResponsesGenerationJob(ResponsesGenerationRequest):
         format: Literal["json", "jsonl"],
         uuid: UUID
     ) -> None:
-        save_path = GLOBAL_SETTINGS.save_dir / f"{str(uuid)}.{format}"
+        save_path = GLOBAL_SETTINGS.save_dir / f"{uuid}.{format}"
         with open(save_path, 'w') as save_file:
             if format == "json":
                 save_file.write(self.model_dump_json(indent=2))
             elif format == "jsonl":
-                if not self.response: raise ResponseEmptyError(str(uuid))
+                if not self.response:
+                    raise ResponseEmptyError(str(uuid))
                 for r in self.response:
-                    save_file.write(r.model_dump_json() + "\n")
+                    entry = ResponsesJSONEntry(
+                        responses_model_id=self.model_id,
+                        number=r.number,
+                        category=r.category,
+                        query=r.query,
+                        content=r.content
+                    )
+                    save_file.write(entry.model_dump_json() + "\n")
     
     @classmethod
     def load(

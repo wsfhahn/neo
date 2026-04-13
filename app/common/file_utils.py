@@ -46,28 +46,6 @@ def load_job(uuid_str: str) -> JobType:
     return validate_job_model(content, str(load_path))
 
 
-def save_queries_job_jsonl(
-    job: QueriesGenerationJob,
-    job_uuid: UUID
-) -> None:
-    """Save a queries generation job to a JSONL file for big data operations."""
-
-    if not job.response:
-        raise ResponseEmptyError(uuid_str=str(job_uuid))
-    save_path = GLOBAL_SETTINGS.save_dir / f"{str(job_uuid)}.jsonl"
-    with open(save_path, 'w') as save_file:
-        for response in job.response:
-            category = response.category
-            for query in response.queries:
-                jsonl_entry = QueriesJSONLEntry(
-                    model_id=job.model_id,
-                    category=category,
-                    number=query.number,
-                    query=query.query
-                )
-                save_file.write(jsonl_entry.model_dump_json() + "\n")
-
-
 def queries_jsonl_iterator(job_uuid: UUID) -> Iterator[QueriesJSONLEntry]:
     load_path = GLOBAL_SETTINGS.save_dir / f"{str(job_uuid)}.jsonl"
     if not load_path.exists():
