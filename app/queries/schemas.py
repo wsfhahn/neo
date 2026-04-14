@@ -22,7 +22,7 @@ class ModelQueriesResponse(BaseModel):
 
 
 class QueriesResponse(BaseModel):
-    """A queries response to return to a client."""
+    """ModelQueriesResponse wrapper containing the category for saving or returning to a client."""
     category: str
     queries: list[ModelQueryResponse]
 
@@ -90,13 +90,19 @@ class QueriesGenerationJob(QueriesGenerationRequest):
 
     def save(
         self,
+        format: Literal["json", "jsonl"],
         uuid: UUID
     ) -> None:
-        json_path = GLOBAL_SETTINGS.save_dir / f"{str(uuid)}.json"
-        jsonl_path = GLOBAL_SETTINGS.save_dir / f"{str(uuid)}.jsonl"
-        with open(json_path, 'w') as json_file:
-            json_file.write(self.model_dump_json(indent=2))
-        if not self.response: return
-        with open(jsonl_path, 'w') as jsonl_file:
-            for r in self.response:
-                jsonl_file.write
+        save_path = GLOBAL_SETTINGS.save_dir / f"{str(uuid)}.{format}"
+        with open(save_path, 'w') as save_file:
+            if format == "json": save_file.write(self.model_dump_json(indent=2))
+            elif format == "jsonl":
+                if not self.response: raise ResponseEmptyError(str(uuid))
+                for c in self.response:
+                    for q in c.queries:
+                        save_file.write(QueriesJSONLEntry(
+                            model_id=self.model_id,
+                            category=c.category,
+                            number=q.number,
+                            query=q.query
+                        ).model_dump_json())

@@ -23,16 +23,13 @@ async def worker() -> None:
             next_job_id = await job_queue.get()
             if not next_job_id:
                 continue
-
             async with job_lock:
                 job = jobs[next_job_id]
                 job.status = "running"
-            
             if isinstance(job, QueriesGenerationJob):
                 result: JobType = await to_thread(run_queries_job, job)
             elif isinstance(job, ResponsesGenerationJob):
                 result = await to_thread(run_responses_job, job)
-
             async with job_lock:
                 jobs[next_job_id] = result
         except Exception as e:

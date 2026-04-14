@@ -1,94 +1,53 @@
-from openai.types.chat import ChatCompletionMessageParam
-from pydantic import ValidationError
-
-from app.common.errors import GenerationError
-from app.common.config import GLOBAL_CLIENT, GLOBAL_SETTINGS
+from app.common.literals import IterableJobStatus
+from app.common.generation import generate_response
 from app.queries.prompts import QUERY_GENERATOR_SYSTEM_PROMPT
-from app.queries.schemas import (
-    ModelQueriesResponse,
-    QueriesGenerationJob,
-    QueriesResponse
-)
+from app.queries.schemas import QueriesGenerationJob, QueriesResponse, ModelQueriesResponse
 
 
 def run_queries_job(job: QueriesGenerationJob) -> QueriesGenerationJob:
     """Run a queries job and return the completed job."""
 
     output: list[QueriesResponse] = []
-
+    error_detail: str | None = None
+    def _to_job(stopped: bool = False) -> QueriesGenerationJob:
+        if stopped: status: IterableJobStatus = "error_stopped"
+        elif error_detail: status = "error_continued"
+        else: status = "complete"
+        return QueriesGenerationJob(
+            categories=job.categories,
+            queries_per_category=job.queries_per_category,
+            max_retries=job.max_retries,
+            on_error=job.on_error,
+            model_id=job.model_id,
+            status=status,
+            error_detail=error_detail,
+            response=output if len(output) != 0 else None
+        )
     for category in job.categories:
-        chat: list[ChatCompletionMessageParam] = [
-            {"role": "system", "content": QUERY_GENERATOR_SYSTEM_PROMPT.format(n=job.queries_per_category)},
-            {"role": "user", "content": category}
-        ]
-
-        error_detail: str | None = None
-
         retry = 0
         while True:
             try:
-                raw_response = GLOBAL_CLIENT.chat.completions.parse(
-                    messages=chat,
-                    model=job.model_id,
-                    temperature=GLOBAL_SETTINGS.temperature,
-                    extra_body={
-                        "top_k": GLOBAL_SETTINGS.top_k,
-                        "top_p": GLOBAL_SETTINGS.top_p,
-                        "min_p": GLOBAL_SETTINGS.min_p
-                    },
-                    response_format=ModelQueriesResponse
+                response = generate_response(
+                    user_message=category,
+                    system_message=QUERY_GENERATOR_SYSTEM_PROMPT,
+                    response_format=ModelQueriesResponse,
+                    model_id=job.model_id
                 )
-
-                response = raw_response.choices[0].message.content
-                refusal = raw_response.choices[0].message.refusal
-
-                if not response:
-                    if refusal:
-                        raise GenerationError(
-                            reason=f"model refused to generate queries for category {category}: {refusal}"
-                        )
-                    raise GenerationError(
-                        reason="model response was empty"
-                    )
-                
-                try:
-                    loaded = ModelQueriesResponse.model_validate_json(response)
-                except ValidationError as e:
-                    raise GenerationError(
-                        reason=f"model failed to adhere to output schema: {e}"
-                    )
+                assert isinstance(response, ModelQueriesResponse)
                 output.append(QueriesResponse(
                     category=category,
-                    queries=loaded.queries
+                    queries=response.queries
                 ))
                 break
             except Exception as e:
                 if retry < job.max_retries:
                     retry += 1
                     continue
-
                 if job.on_error == "stop":
-                    return QueriesGenerationJob(
-                        categories=job.categories,
-                        queries_per_category=job.queries_per_category,
-                        max_retries=job.max_retries,
-                        on_error=job.on_error,
-                        model_id=job.model_id,
-                        status="error_stopped",
-                        error_detail=str(e),
-                        response=output
-                    )
-                elif job.on_error == "continue":
+                    error_detail = str(e)
+                    return _to_job(stopped=True)
+                if job.on_error == "continue":
                     error_detail = str(e)
                     break
     
-    return QueriesGenerationJob(
-        categories=job.categories,
-        queries_per_category=job.queries_per_category,
-        max_retries=job.max_retries,
-        on_error=job.on_error,
-        model_id=job.model_id,
-        status="error_continued" if error_detail else "complete",
-        error_detail=error_detail,
-        response=output
-    )
+    return _to_job()

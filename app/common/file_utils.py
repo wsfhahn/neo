@@ -5,22 +5,18 @@ from app.common.types import JobType
 from app.queries.schemas import QueriesGenerationJob, QueriesJSONLEntry
 from app.responses.schemas import ResponsesGenerationJob
 from app.common.config import GLOBAL_SETTINGS
-from app.common.errors import (
-    FileNotFoundError,
-    CorruptedSaveFileError,
-    ResponseEmptyError
-)
+from app.common.errors import FileNotFoundError, CorruptedSaveFileError
 
 
-def save_job(
-    job: JobType,
-    job_uuid: UUID
-) -> None:
-    """Save a job to a .json file named by the UUID."""
+# def save_job(
+#     job: JobType,
+#     job_uuid: UUID
+# ) -> None:
+#     """Save a job to a .json file named by the UUID."""
 
-    save_path = GLOBAL_SETTINGS.save_dir / f"{str(job_uuid)}.json"
-    with open(save_path, 'w') as save_file:
-        save_file.write(job.model_dump_json(indent=2))
+#     save_path = GLOBAL_SETTINGS.save_dir / f"{str(job_uuid)}.json"
+#     with open(save_path, 'w') as save_file:
+#         save_file.write(job.model_dump_json(indent=2))
 
 
 def load_job(uuid_str: str) -> JobType:

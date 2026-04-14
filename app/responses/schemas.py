@@ -78,7 +78,7 @@ class ResponsesGenerationJob(ResponsesGenerationRequest):
         format: Literal["json", "jsonl"],
         uuid: UUID
     ) -> None:
-        save_path = GLOBAL_SETTINGS.save_dir / f"{uuid}.{format}"
+        save_path = GLOBAL_SETTINGS.save_dir / f"{str(uuid)}.{format}"
         with open(save_path, 'w') as save_file:
             if format == "json":
                 save_file.write(self.model_dump_json(indent=2))

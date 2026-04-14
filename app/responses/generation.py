@@ -1,10 +1,7 @@
-from openai.types.chat import ChatCompletionMessageParam
 from uuid import UUID
 
 from app.responses.schemas import ResponsesGenerationJob, ResponsesResponse
 from app.common.file_utils import queries_jsonl_iterator
-from app.common.config import GLOBAL_SETTINGS, GLOBAL_CLIENT
-from app.common.errors import GenerationError
 from app.common.literals import IterableJobStatus
 from app.common.generation import generate_response
 
@@ -31,7 +28,8 @@ def run_responses_job(job: ResponsesGenerationJob) -> ResponsesGenerationJob:
         while True:
             try:
                 response = generate_response(
-                    user_message=query.query
+                    user_message=query.query,
+                    model_id=job.model_id
                 )
                 assert isinstance(response, str)
                 output.append(ResponsesResponse(
