@@ -29,7 +29,7 @@ def run_queries_job(job: QueriesGenerationJob) -> QueriesGenerationJob:
             try:
                 response = generate_response(
                     user_message=category,
-                    system_message=QUERY_GENERATOR_SYSTEM_PROMPT,
+                    system_message=QUERY_GENERATOR_SYSTEM_PROMPT.format(n=job.queries_per_category),
                     response_format=ModelQueriesResponse,
                     model_id=job.model_id
                 )

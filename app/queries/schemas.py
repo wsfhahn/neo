@@ -105,4 +105,4 @@ class QueriesGenerationJob(QueriesGenerationRequest):
                             category=c.category,
                             number=q.number,
                             query=q.query
-                        ).model_dump_json())
+                        ).model_dump_json() + "\n")

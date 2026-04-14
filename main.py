@@ -4,7 +4,7 @@ from uuid import UUID, uuid4
 from fastapi import FastAPI
 from typing import Literal
 
-from app.common.literals import MessageJobStatus, IterableJobStatus
+from app.common.literals import IterableJobStatus
 from app.common.types import JobType, JobRequestType
 from app.common.file_utils import load_job
 from app.queries.schemas import QueriesGenerationJob
@@ -79,7 +79,7 @@ async def get_job(uuid_str: str) -> JobType:
 
 @app.get("/list", response_model=JobsList)
 async def list_jobs() -> JobsList:
-    job_statuses: dict[str, MessageJobStatus | IterableJobStatus] = {}
+    job_statuses: dict[str, IterableJobStatus] = {}
     for id, job in jobs.items():
         job_statuses[str(id)] = job.status
     
@@ -103,23 +103,10 @@ async def save_job_endpoint(
         if not job:
             raise JobNotFoundError(uuid_str=uuid_str)
     
-        if format == "json":
-            save_job(
-                job=job,
-                job_uuid=uuid
-            )
-        elif format == "jsonl" and isinstance(job, QueriesGenerationJob):
-            save_queries_job_jsonl(
-                job=job,
-                job_uuid=uuid
-            )
-        elif format == "jsonl" and isinstance(job, ResponsesGenerationJob):
-            save_responses_job_jsonl(
-                job=job,
-                job_uuid=uuid
-            )
-        else:
-            raise JobNotIterativeError(uuid_str=uuid_str)
+        job.save(
+            format=format,
+            uuid=uuid
+        )
 
     return InfoResponse(
         message=f"Successfully saved job '{uuid_str}'"
