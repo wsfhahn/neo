@@ -1,20 +1,20 @@
-from app.common.generation import generate_response
-from pydantic import BaseModel, Field
+from app.followups.schemas import Chat
 from rich import print
 
 
-class IntroductionResponse(BaseModel):
-    """An introduction to the user from the AI assistant."""
-    name: str = Field(..., description="The identity of the AI assistant")
-    bio: str = Field(..., description="A short bio about the AI assistant (1-3 sentences)")
-
-
-response = generate_response(
-    user_message="Who are you?",
-    system_message=None,
-    response_format=IntroductionResponse,
-    model_id=None
+test_chat = Chat.from_openai_chat(
+    chat=[
+        {"role": "system", "content": "You are a helpful assistant"},
+        {"role": "user", "content": "Who are you?"},
+        {"role": "assistant", "content": "I am a helpful assistant."}
+    ]
 )
 
+print(test_chat.to_context_string())
 
-print(response)
+followup = test_chat.generate_followup(
+    max_reties=3,
+    append_to_chat=True
+)
+
+print(test_chat.to_context_string())
