@@ -1,19 +1,15 @@
-from app.common.literals import IterableJobStatus
-from app.common.generation import generate_response
-from app.queries.prompts import QUERY_GENERATOR_SYSTEM_PROMPT
-from app.queries.schemas import QueriesGenerationJob, QueriesResponse, ModelQueriesResponse
+from app.queries.schemas import QueriesJob, QueriesResponse
+from app.common.chats import Chat, ChatMessage
+from app.queries.prompts import QUERIES_GENERATOR_SYSTEM_PROMPT
+from app.common.literals import JobStatus
 
 
-def run_queries_job(job: QueriesGenerationJob) -> QueriesGenerationJob:
-    """Run a queries job and return the completed job."""
-
-    output: list[QueriesResponse] = []
-    error_detail: str | None = None
-    def _to_job(stopped: bool = False) -> QueriesGenerationJob:
-        if stopped: status: IterableJobStatus = "error_stopped"
+def run_queries_job(job: QueriesJob) -> QueriesJob:
+    def _to_job(stopped: bool = False) -> QueriesJob:
+        if stopped: status: JobStatus = "error_stopped"
         elif error_detail: status = "error_continued"
         else: status = "complete"
-        return QueriesGenerationJob(
+        return QueriesJob(
             categories=job.categories,
             queries_per_category=job.queries_per_category,
             max_retries=job.max_retries,
@@ -21,33 +17,36 @@ def run_queries_job(job: QueriesGenerationJob) -> QueriesGenerationJob:
             model_id=job.model_id,
             status=status,
             error_detail=error_detail,
-            response=output if len(output) != 0 else None
+            result=responses
         )
+
+    responses: list[QueriesResponse] = []
+    error_detail: str | None = None
     for category in job.categories:
-        retry = 0
-        while True:
-            try:
-                response = generate_response(
-                    user_message=category,
-                    system_message=QUERY_GENERATOR_SYSTEM_PROMPT.format(n=job.queries_per_category),
-                    response_format=ModelQueriesResponse,
-                    model_id=job.model_id
+        category_chat = Chat(
+            messages=[
+                ChatMessage(
+                    role="system",
+                    content=QUERIES_GENERATOR_SYSTEM_PROMPT.format(n=job.queries_per_category)
+                ),
+                ChatMessage(
+                    role="user",
+                    content=category
                 )
-                assert isinstance(response, ModelQueriesResponse)
-                output.append(QueriesResponse(
-                    category=category,
-                    queries=response.queries
-                ))
-                break
-            except Exception as e:
-                if retry < job.max_retries:
-                    retry += 1
-                    continue
-                if job.on_error == "stop":
-                    error_detail = str(e)
-                    return _to_job(stopped=True)
-                if job.on_error == "continue":
-                    error_detail = str(e)
-                    break
-    
+            ]
+        )
+        try:
+            response = category_chat.generate(
+                max_retries=job.max_retries,
+                model_id=job.model_id,
+                append_to_chat=False,
+                response_model=QueriesResponse
+            )
+            responses.append(response)
+        except Exception as e:
+            error_detail = str(e)
+            if job.on_error == "stop":
+                return _to_job(stopped=True)
+            elif job.on_error == "continue":
+                continue
     return _to_job()

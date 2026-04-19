@@ -1,8 +1,9 @@
 from typing import Union
 
-from app.queries.schemas import QueriesGenerationJob, QueriesGenerationRequest
-from app.responses.schemas import ResponsesGenerationJob, ResponsesGenerationRequest
+from app.queries.schemas import QueriesJob, QueriesJobRequest
+from app.data.schemas import DataJob, DataJobRequest
 
-JobType = Union[QueriesGenerationJob, ResponsesGenerationJob]
 
-JobRequestType = Union[QueriesGenerationRequest, ResponsesGenerationRequest]
+JobType = Union[QueriesJob, DataJob]
+
+JobRequestType = Union[QueriesJobRequest, DataJobRequest]

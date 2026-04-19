@@ -1,20 +1,16 @@
-from __future__ import annotations
 from pydantic import BaseModel
 
-from app.common.literals import IterableJobStatus
+from app.common.literals import JobStatus
 
 
-class InfoResponse(BaseModel):
-    """Simple info response."""
+class MessageResponse(BaseModel):
     message: str
 
 
-class JobScheduledResponse(BaseModel):
-    """A response confirming that a job has been scheduled, returning the UUID for polling."""
+class JobRegisteredResponse(BaseModel):
+    uuid_str: str
     message: str
-    uuid: str
 
 
-class JobsList(BaseModel):
-    """A response containing a list of jobs and their statuses."""
-    jobs: dict[str, IterableJobStatus]
+class JobStatusesResponse(BaseModel):
+    jobs: dict[str, JobStatus]

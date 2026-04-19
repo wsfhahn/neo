@@ -1,136 +1,137 @@
+from fastapi import FastAPI
+from uuid import uuid4, UUID
 from contextlib import asynccontextmanager
 from asyncio import create_task
-from uuid import UUID, uuid4
-from fastapi import FastAPI
-from typing import Literal
 
-from app.common.literals import IterableJobStatus
-from app.common.types import JobType, JobRequestType
-from app.common.file_utils import load_job
-from app.queries.schemas import QueriesGenerationJob
-from app.responses.schemas import ResponsesGenerationJob
-from app.common.schemas import (
-    InfoResponse,
-    JobScheduledResponse,
-    JobsList
-)
+from app.common.jobs import job_lock, job_queue, jobs, worker
+from app.common.types import JobRequestType, JobType
+from app.common.literals import JobStatus, SaveFormat
+from app.data.schemas import DataJob
+from app.data.errors import QueriesResponseEmpty, InvalidJobType
+from app.queries.schemas import QueriesJob
 from app.common.errors import (
     AppError,
     handle_app_error,
-    InvalidUUIDError,
     JobNotFoundError,
-    JobNotIterativeError
+    InvalidUUIDError
 )
-from app.common.jobs import (
-    jobs,
-    job_queue,
-    job_lock,
-    worker
+from app.common.schemas import (
+    JobRegisteredResponse,
+    MessageResponse,
+    JobStatusesResponse
 )
 
 
 @asynccontextmanager
-async def lifespan(app: FastAPI): # type: ignore
+async def lifespan(app: FastAPI): # type: ignore[no-untyped-def]
     worker_task = create_task(worker())
     yield
-
 
 app = FastAPI(
     lifespan=lifespan,
     exception_handlers={
-        AppError: handle_app_error # type: ignore
+        AppError: handle_app_error # type: ignore[dict-item]
     }
 )
 
 
-@app.get("/ping", response_model=InfoResponse)
-async def ping() -> InfoResponse:
-    return InfoResponse(message="pong!")
+@app.get("/ping", response_model=MessageResponse)
+async def ping() -> MessageResponse:
+    return MessageResponse(message="pong!")
 
 
-@app.post("/create", response_model=JobScheduledResponse)
-async def create_job(payload: JobRequestType) -> JobScheduledResponse:
-    uuid = uuid4()
+@app.get("/jobs", response_model=JobStatusesResponse)
+async def get_statuses() -> JobStatusesResponse:
+    statuses: dict[str, JobStatus] = {}
     async with job_lock:
-        jobs[uuid] = payload.initialize_job()
-        await job_queue.put(uuid)
+        for uuid, job in jobs.items():
+            statuses[str(uuid)] = job.status
+    return JobStatusesResponse(jobs=statuses)
+
+
+@app.post("/register", response_model=JobRegisteredResponse)
+async def register(payload: JobRequestType) -> JobRegisteredResponse:
+    job = payload.initialize_job()
+    if isinstance(job, DataJob):
+        async with job_lock: queries_job = jobs.get(UUID(job.queries_job_uuid))
+        if not queries_job:
+            raise JobNotFoundError(job.queries_job_uuid)
+        if not isinstance(queries_job, QueriesJob):
+            raise InvalidJobType(job.queries_job_uuid)
+        if not queries_job.result or len(queries_job.result) == 0:
+            raise QueriesResponseEmpty(job.queries_job_uuid)
+        job.chats = queries_job.to_chats(system_messages=job.system_messages)
+
+
+    job_uuid = uuid4()
+    async with job_lock:
+        await job_queue.put(job_uuid)
+        jobs[job_uuid] = job
     
-    return JobScheduledResponse(
-        message="Job successfully scheduled",
-        uuid=str(uuid)
+    return JobRegisteredResponse(
+        uuid_str=str(job_uuid),
+        message="Job has been successfully scheduled!"
     )
 
 
 @app.get("/job/{uuid_str}", response_model=JobType)
 async def get_job(uuid_str: str) -> JobType:
     try:
-        uuid = UUID(uuid_str)
+        job_uuid = UUID(uuid_str)
     except Exception:
-        raise InvalidUUIDError(uuid_str=uuid_str)
-
+        raise InvalidUUIDError(uuid_str)
+    
     async with job_lock:
-        job = jobs.get(uuid)
-    
+        job = jobs.get(job_uuid)
     if not job:
-        raise JobNotFoundError(uuid_str=uuid_str)
-    
+        raise JobNotFoundError(uuid_str)
     return job
 
 
-@app.get("/list", response_model=JobsList)
-async def list_jobs() -> JobsList:
-    job_statuses: dict[str, IterableJobStatus] = {}
-    for id, job in jobs.items():
-        job_statuses[str(id)] = job.status
-    
-    return JobsList(
-        jobs=job_statuses
-    )
-
-
-@app.get("/job/{uuid_str}/save/{format}", response_model=InfoResponse)
-async def save_job_endpoint(
-    uuid_str: str,
-    format: Literal["json", "jsonl"]
-) -> InfoResponse:
+@app.get("/job/{uuid_str}/save/{format}", response_model=JobRegisteredResponse)
+async def save_job(uuid_str: str, format: SaveFormat) -> JobRegisteredResponse:
     try:
-        uuid = UUID(uuid_str)
-    except Exception as e:
-        raise InvalidUUIDError(uuid_str=uuid_str)
+        job_uuid = UUID(uuid_str)
+    except Exception:
+        raise InvalidUUIDError(uuid_str)
     
-    async with job_lock:
-        job = jobs.get(uuid)
-        if not job:
-            raise JobNotFoundError(uuid_str=uuid_str)
-    
-        job.save(
-            format=format,
-            uuid=uuid
-        )
+    job = jobs.get(job_uuid)
+    if not job:
+        raise JobNotFoundError(uuid_str)
+    job.save(uuid_str, format)
 
-    return InfoResponse(
-        message=f"Successfully saved job '{uuid_str}'"
+    return JobRegisteredResponse(
+        uuid_str=uuid_str,
+        message="Job successfully saved!"
     )
 
 
-@app.get("/job/{uuid_str}/load", response_model=InfoResponse)
-async def load_job_endpoint(uuid_str: str) -> InfoResponse:
+@app.get("/job/{uuid_str}/load", response_model=JobRegisteredResponse)
+async def load_job(uuid_str: str) -> JobRegisteredResponse:
+    def _validate_job() -> JobType:
+        try:
+            return QueriesJob.load(uuid_str)
+        except Exception:
+            pass
+        
+        try:
+            return DataJob.load(uuid_str)
+        except Exception as e:
+            raise e
+
     try:
-        uuid = UUID(uuid_str)
-    except Exception as e:
-        raise InvalidUUIDError(uuid_str=uuid_str)
+        job_uuid = UUID(uuid_str)
+    except Exception:
+        raise InvalidUUIDError(uuid_str)
     
-    loaded_job = load_job(uuid_str=uuid_str)
-
-    scheduled: bool = False
+    job = _validate_job()
     async with job_lock:
-        jobs[uuid] = loaded_job
-        if loaded_job.status not in ["complete", "error"] and uuid not in job_queue._queue: # type: ignore
-            await job_queue.put(uuid)
-            scheduled = True
-    
-    
-    return InfoResponse(
-        message=f"Loaded job '{uuid_str}' and queued it for processing" if scheduled else f"Loaded job '{uuid_str}'"
+        if job.status not in ["complete", "error_continued", "error_stopped"]:
+            job.status = "pending"
+            await job_queue.put(job_uuid)
+        jobs[job_uuid] = job
+
+    return JobRegisteredResponse(
+        uuid_str=uuid_str,
+        message="Successfully loaded job!"
     )
-    
