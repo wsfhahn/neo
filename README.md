@@ -1,5 +1,8 @@
 # Neo
 
+> [!CAUTION]
+> This README is outdated! It will be updated soon. Please check [my blog post](https://wsfhahn.github.io/blog/neo) for a reference in the meantime.
+
 ![Pascal's Triangle](assets/pascals_triangle.png)
 
 This project is a server to handle your synthetic dataset generation needs. It is based on FastAPI, and uses a worker so that you can queue generation jobs, poll their statuses, and retrieve the results at a later time.
