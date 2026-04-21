@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from pydantic import BaseModel, Field, ValidationError
+from pydantic import BaseModel, Field, ValidationError, field_validator
 from typing import Any
 
 from app.common.config import GLOBAL_CLIENT, GLOBAL_SETTINGS
@@ -73,22 +73,35 @@ class QueriesJobRequest(BaseModel):
     on_error: OnError = "continue"
     model_id: str = GLOBAL_SETTINGS.default_model_id
 
-    def model_post_init(self, __context: Any) -> None:
-        if len(self.categories) == 0:
+    @field_validator("categories")
+    @classmethod
+    def validate_categories(cls, categories: list[str]) -> list[str]:
+        if len(categories) == 0:
             raise InvalidQueriesJobRequest(
                 reason="len(categories) cannot be 0"
             )
-        for i, category in enumerate(self.categories):
+        for i, category in enumerate(categories):
             if len(category) == 0:
                 raise InvalidQueriesJobRequest(
                     reason=f"category {i} is empty"
                 )
-        if self.max_retries < 0:
+        return categories
+            
+    @field_validator("max_retries")
+    @classmethod
+    def validate_max_retries(cls, max_retries: int) -> int:
+        if max_retries < 0:
             raise InvalidQueriesJobRequest(
-                reason="max_retries must be either 0 or a positive integer"
+                reason=f"max_retries must be >= 0, got {max_retries}"
             )
-        if self.model_id not in [m.id for m in GLOBAL_CLIENT.models.list()]:
-            raise InvalidModelIDError(self.model_id)
+        return max_retries
+    
+    @field_validator("model_id")
+    @classmethod
+    def validate_model_id(cls, model_id: str) -> str:
+        if model_id not in [m.id for m in GLOBAL_CLIENT.models.list()]:
+            raise InvalidModelIDError(model_id)
+        return model_id
         
     def initialize_job(self) -> QueriesJob:
         return QueriesJob(
