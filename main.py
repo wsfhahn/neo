@@ -6,6 +6,7 @@ from asyncio import create_task
 from app.common.jobs import job_lock, job_queue, jobs, worker
 from app.common.types import JobRequestType, JobType
 from app.common.literals import JobStatus, SaveFormat
+from app.common.file_utils import load_job
 from app.data.schemas import DataJob
 from app.data.errors import QueriesResponseEmpty, InvalidJobType
 from app.queries.schemas import QueriesJob
@@ -107,24 +108,12 @@ async def save_job(uuid_str: str, format: SaveFormat) -> JobRegisteredResponse:
 
 
 @app.get("/job/{uuid_str}/load", response_model=JobRegisteredResponse)
-async def load_job(uuid_str: str) -> JobRegisteredResponse:
-    def _validate_job() -> JobType:
-        try:
-            return QueriesJob.load(uuid_str)
-        except Exception:
-            pass
-        
-        try:
-            return DataJob.load(uuid_str)
-        except Exception as e:
-            raise e
-
-    try:
-        job_uuid = UUID(uuid_str)
-    except Exception:
-        raise InvalidUUIDError(uuid_str)
+async def load_job_endpoint(uuid_str: str) -> JobRegisteredResponse:
+    try: job_uuid = UUID(uuid_str)
+    except Exception: raise InvalidUUIDError(uuid_str)
     
-    job = _validate_job()
+    job = load_job(job_uuid)
+
     async with job_lock:
         if job.status not in ["complete", "error_continued", "error_stopped"]:
             job.status = "pending"
