@@ -6,7 +6,7 @@ from asyncio import create_task
 from app.common.jobs import job_lock, job_queue, jobs, worker
 from app.common.types import JobRequestType, JobType
 from app.common.literals import JobStatus, SaveFormat
-from app.common.file_utils import load_job
+from app.common.file_utils import load_and_add_job, startup_load_jobs, shutdown_save_jobs
 from app.data.schemas import DataJob
 from app.data.errors import QueriesResponseEmpty, InvalidJobType
 from app.queries.schemas import QueriesJob
@@ -25,8 +25,10 @@ from app.common.schemas import (
 
 @asynccontextmanager
 async def lifespan(app: FastAPI): # type: ignore[no-untyped-def]
+    await startup_load_jobs()
     worker_task = create_task(worker())
     yield
+    await shutdown_save_jobs()
 
 app = FastAPI(
     lifespan=lifespan,
@@ -63,7 +65,6 @@ async def register(payload: JobRequestType) -> JobRegisteredResponse:
             raise QueriesResponseEmpty(job.queries_job_uuid)
         job.chats = queries_job.to_chats(system_messages=job.system_messages)
 
-
     job_uuid = uuid4()
     async with job_lock:
         await job_queue.put(job_uuid)
@@ -77,28 +78,23 @@ async def register(payload: JobRequestType) -> JobRegisteredResponse:
 
 @app.get("/job/{uuid_str}", response_model=JobType)
 async def get_job(uuid_str: str) -> JobType:
-    try:
-        job_uuid = UUID(uuid_str)
-    except Exception:
-        raise InvalidUUIDError(uuid_str)
+    try: job_uuid = UUID(uuid_str)
+    except Exception: raise InvalidUUIDError(uuid_str)
     
     async with job_lock:
         job = jobs.get(job_uuid)
-    if not job:
-        raise JobNotFoundError(uuid_str)
+    if not job: raise JobNotFoundError(uuid_str)
     return job
 
 
 @app.get("/job/{uuid_str}/save/{format}", response_model=JobRegisteredResponse)
 async def save_job(uuid_str: str, format: SaveFormat) -> JobRegisteredResponse:
-    try:
-        job_uuid = UUID(uuid_str)
-    except Exception:
-        raise InvalidUUIDError(uuid_str)
+    try: job_uuid = UUID(uuid_str)
+    except Exception: raise InvalidUUIDError(uuid_str)
     
-    job = jobs.get(job_uuid)
-    if not job:
-        raise JobNotFoundError(uuid_str)
+    async with job_lock:
+        job = jobs.get(job_uuid)
+    if not job: raise JobNotFoundError(uuid_str)
     job.save(uuid_str, format)
 
     return JobRegisteredResponse(
@@ -112,13 +108,7 @@ async def load_job_endpoint(uuid_str: str) -> JobRegisteredResponse:
     try: job_uuid = UUID(uuid_str)
     except Exception: raise InvalidUUIDError(uuid_str)
     
-    job = load_job(job_uuid)
-
-    async with job_lock:
-        if job.status not in ["complete", "error_continued", "error_stopped"]:
-            job.status = "pending"
-            await job_queue.put(job_uuid)
-        jobs[job_uuid] = job
+    await load_and_add_job(job_uuid)
 
     return JobRegisteredResponse(
         uuid_str=uuid_str,
