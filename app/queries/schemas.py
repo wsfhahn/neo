@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from pydantic import BaseModel, Field, ValidationError, field_validator
-from typing import Any
 
 from app.common.config import GLOBAL_CLIENT, GLOBAL_SETTINGS
 from app.common.literals import JobStatus, OnError, SaveFormat

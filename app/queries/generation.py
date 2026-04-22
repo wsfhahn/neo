@@ -1,6 +1,6 @@
 from app.queries.schemas import QueriesJob, QueriesResponse
 from app.common.chats import Chat, ChatMessage
-from app.queries.prompts import QUERIES_GENERATOR_SYSTEM_PROMPT
+from app.common.prompts import QUERIES_GENERATOR_SYSTEM_PROMPT
 from app.common.literals import JobStatus
 
 

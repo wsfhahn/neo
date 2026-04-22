@@ -82,7 +82,7 @@ class JobNotFoundError(AppError):
 
     def __init__(self, uuid_str: str):
         self.uuid_str = uuid_str
-        super().__init__(f"The just '{uuid_str}' does not exist")
+        super().__init__(f"The job '{uuid_str}' does not exist")
 
 
 class InvalidUUIDError(AppError):
