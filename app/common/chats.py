@@ -28,6 +28,7 @@ T_BaseModel = TypeVar("T_BaseModel", bound=BaseModel)
 class ChatMessage(BaseModel):
     role: MessageRole
     content: str
+    reasoning_content: str | None = None
 
     def model_post_init(self, __context: Any) -> None:
         if len(self.content) == 0:
@@ -215,11 +216,19 @@ class Chat(BaseModel):
                 else:
                     raw_response = GLOBAL_CLIENT.chat.completions.create(**kwargs)
                 
-                content = raw_response.choices[0].message.content
-                refusal = raw_response.choices[0].message.refusal
+                message = raw_response.choices[0].message
+                content = message.content
+                reasoning_content = getattr(message, "reasoning_content", None)
+                refusal = message.refusal
 
                 if refusal: raise GenerationError(f"API refused request: {refusal}")
                 if not content: raise GenerationError("API returned empty response content")
+
+                new_message = ChatMessage(
+                    role="assistant",
+                    content=content,
+                    reasoning_content=reasoning_content
+                )
 
                 if response_model:
                     try:
@@ -227,10 +236,10 @@ class Chat(BaseModel):
                     except ValidationError:
                         raise GenerationError("Model failed to adhere to output format")
                 else:
-                    output = ChatMessage(role="assistant", content=content)
-                
+                    output = new_message
+
                 if append_to_chat:
-                    self.add_message(content, role="assistant")
+                    self.add_message(new_message)
                 
                 return output
             except Exception as e:
