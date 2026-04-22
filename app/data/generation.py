@@ -39,6 +39,10 @@ def run_data_job(job: DataJob) -> DataJob:
                     model_id=job.model_id,
                     append_to_chat=True
                 )
+                if chat.length == chat_desired_lengths[i]:
+                    chat.complete = True
+                    job.chats[i] = chat
+                    continue
                 chat.generate_followup(
                     max_retries=job.max_retries,
                     model_id=job.model_id,
@@ -50,7 +54,4 @@ def run_data_job(job: DataJob) -> DataJob:
                 job.chats[i] = chat
                 if job.on_error == "continue": continue
                 elif job.on_error == "stop": return _to_job(stopped=True)
-            if chat.length == chat_desired_lengths[i]:
-                chat.complete = True
-            job.chats[i] = chat
     return _to_job()
