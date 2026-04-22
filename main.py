@@ -114,3 +114,22 @@ async def load_job_endpoint(uuid_str: str) -> JobRegisteredResponse:
         uuid_str=uuid_str,
         message="Successfully loaded job!"
     )
+
+
+@app.get("/save/{format}", response_model=MessageResponse)
+async def save_all_jobs(format: SaveFormat) -> MessageResponse:
+    async with job_lock:
+        for uuid, job in jobs.items():
+            job.save(str(uuid), format)
+    
+    return MessageResponse(
+        message="Successfully saved all jobs!"
+    )
+
+
+@app.get("/load", response_model=MessageResponse)
+async def load_all_jobs() -> MessageResponse:
+    await startup_load_jobs()
+    return MessageResponse(
+        message="Successfully loaded all jobs!"
+    )
