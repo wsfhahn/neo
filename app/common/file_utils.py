@@ -38,15 +38,17 @@ async def load_and_add_job(uuid: UUID) -> None:
 
 
 async def startup_load_jobs() -> None:
-    for item in Path.iterdir(GLOBAL_SETTINGS.save_dir):
-        if item.is_file() and item.suffix == ".json":
-            try:
-                uuid = UUID(item.stem)
-                await load_and_add_job(uuid)
-            except Exception:
-                continue
+    if GLOBAL_SETTINGS.load_on_startup:
+        for item in Path.iterdir(GLOBAL_SETTINGS.save_dir):
+            if item.is_file() and item.suffix == ".json":
+                try:
+                    uuid = UUID(item.stem)
+                    await load_and_add_job(uuid)
+                except Exception:
+                    continue
 
 
 async def shutdown_save_jobs() -> None:
-    for uuid, job in jobs.items():
-        job.save(str(uuid), "json")
+    if GLOBAL_SETTINGS.save_on_shutdown:
+        for uuid, job in jobs.items():
+            job.save(str(uuid), "json")

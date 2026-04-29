@@ -22,6 +22,8 @@ class Settings(BaseSettings):
     api_host: str
     api_key: str = "none"
     save_dir: Path = Path("storage")
+    load_on_startup: bool = True
+    save_on_shutdown: bool = True
 
     default_model_id: str
     temperature: float = 1.0
