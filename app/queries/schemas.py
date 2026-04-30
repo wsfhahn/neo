@@ -98,7 +98,7 @@ class QueriesJobRequest(BaseModel):
     @field_validator("model_id")
     @classmethod
     def validate_model_id(cls, model_id: str) -> str:
-        if model_id not in [m.id for m in GLOBAL_CLIENT.models.list()]:
+        if model_id not in GLOBAL_SETTINGS.get_valid_model_ids():
             raise InvalidModelIDError(model_id)
         return model_id
         

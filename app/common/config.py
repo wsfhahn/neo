@@ -36,6 +36,14 @@ class Settings(BaseSettings):
         env_file_encoding="utf-8"
     )
 
+    def get_valid_model_ids(self) -> list[str]:
+        try:
+            return [m.id for m in GLOBAL_CLIENT.models.list()]
+        except APIConnectionError:
+            raise UnreachableHostError(self.api_host)
+        except AuthenticationError:
+            raise InvalidAPIKeyError
+
     @field_validator("save_dir")
     @classmethod
     def validate_save_dir(cls, save_dir: Path) -> Path:
@@ -97,12 +105,7 @@ class Settings(BaseSettings):
             api_key=self.api_key
         )
 
-        try:
-            valid_models = [m.id for m in test_client.models.list()]
-        except APIConnectionError:
-            raise UnreachableHostError(self.api_host)
-        except AuthenticationError:
-            raise InvalidAPIKeyError
+        valid_models = self.get_valid_model_ids()
         
         if self.default_model_id not in valid_models:
             raise InvalidModelIDError(self.default_model_id)
