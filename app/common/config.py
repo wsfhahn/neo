@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import os
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from pydantic import model_validator, field_validator
@@ -38,7 +40,7 @@ class Settings(BaseSettings):
 
     def get_valid_model_ids(self) -> list[str]:
         try:
-            return [m.id for m in GLOBAL_CLIENT.models.list()]
+            return [m.id for m in OpenAI(base_url=self.api_host, api_key=self.api_key).models.list()]
         except APIConnectionError:
             raise UnreachableHostError(self.api_host)
         except AuthenticationError:
