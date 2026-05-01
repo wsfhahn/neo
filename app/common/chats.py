@@ -175,7 +175,8 @@ class Chat(BaseModel):
         max_retries: int,
         model_id: str = GLOBAL_SETTINGS.default_model_id,
         append_to_chat: bool = True,
-        response_model: None = None
+        response_model: None = None,
+        desired_length: int | None = None
     ) -> ChatMessage:
         ...
 
@@ -185,7 +186,8 @@ class Chat(BaseModel):
         max_retries: int,
         model_id: str = GLOBAL_SETTINGS.default_model_id,
         append_to_chat: bool = True,
-        response_model: type[T_BaseModel] = ...
+        response_model: type[T_BaseModel] = ...,
+        desired_length: int | None = None
     ) -> T_BaseModel:
         ...
     
@@ -194,8 +196,12 @@ class Chat(BaseModel):
         max_retries: int,
         model_id: str = GLOBAL_SETTINGS.default_model_id,
         append_to_chat: bool = True,
-        response_model: None | type[T_BaseModel] = None
+        response_model: None | type[T_BaseModel] = None,
+        desired_length: int | None = None
     ) -> ChatMessage | T_BaseModel:
+        from rich import print
+        print("[bold green]Generating response...")
+
         openai_chat = self.to_openai_chat()
         kwargs: dict[str, Any] = {
             "messages": openai_chat,
@@ -240,6 +246,9 @@ class Chat(BaseModel):
 
                 if append_to_chat:
                     self.add_message(new_message)
+
+                if desired_length is not None and self.length >= desired_length:
+                    self.complete = True
                 
                 return output
             except Exception as e:
@@ -255,6 +264,9 @@ class Chat(BaseModel):
         model_id: str = GLOBAL_SETTINGS.default_model_id,
         append_to_chat: bool = True
     ) -> FollowUpResponse:
+        from rich import print
+        print("[bold yellow]Generating a followup...")
+
         context_string = self.context_string
         followup_chat = Chat(
             complete=False,

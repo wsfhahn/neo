@@ -24,7 +24,9 @@ class DataJobRequest(BaseModel):
     queries_job_uuid: str
     max_retries: int = 3
     on_error: OnError = "continue"
-    model_id: str = GLOBAL_SETTINGS.default_model_id
+    responses_model_id: str = GLOBAL_SETTINGS.default_model_id
+    follow_up_model_id: str = GLOBAL_SETTINGS.default_model_id
+    batch_size: int = 1
 
     @field_validator("system_messages")
     @classmethod
@@ -64,12 +66,26 @@ class DataJobRequest(BaseModel):
             raise InvalidDataJobRequest("max_retries must be >= 0 and <= 10")
         return max_retries
     
-    @field_validator("model_id")
+    @field_validator("responses_model_id")
     @classmethod
-    def validate_model_id(cls, model_id: str) -> str:
-        if model_id not in GLOBAL_SETTINGS.get_valid_model_ids():
-            raise InvalidModelIDError(model_id)
-        return model_id
+    def validate_responses_model_id(cls, responses_model_id: str) -> str:
+        if responses_model_id not in GLOBAL_SETTINGS.get_valid_model_ids():
+            raise InvalidModelIDError(responses_model_id)
+        return responses_model_id
+    
+    @field_validator("follow_up_model_id")
+    @classmethod
+    def validate_follow_up_model_id(cls, follow_up_model_id: str) -> str:
+        if follow_up_model_id not in GLOBAL_SETTINGS.get_valid_model_ids():
+            raise InvalidModelIDError(follow_up_model_id)
+        return follow_up_model_id
+    
+    @field_validator("batch_size")
+    @classmethod
+    def validate_batch_size(cls, batch_size: int) -> int:
+        if batch_size <= 0 or batch_size > 16:
+            raise InvalidDataJobRequest("batch_size must be > 0 and <= 16")
+        return batch_size
     
     @model_validator(mode="after")
     def validate_cross_fields(self) -> Self:
@@ -85,7 +101,7 @@ class DataJobRequest(BaseModel):
             queries_job_uuid=self.queries_job_uuid,
             max_retries=self.max_retries,
             on_error=self.on_error,
-            model_id=self.model_id,
+            responses_model_id=self.responses_model_id,
             status="pending",
             error_detail=None,
             chats=None
