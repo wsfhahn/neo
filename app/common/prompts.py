@@ -31,14 +31,14 @@ Who are you?
 I am a helpful assistant.
 </assistant>
 
-Ensure that your output matches the provided JSON schema exactly, and does not inclue any other words or commentary except for the output schema itself."""
+Ensure that your output matches the provided JSON schema exactly, and does not inclue any other words or commentary except for the output schema itself. Do NOT include <user> tags in your follow up query."""
 
 
 QUERIES_GENERATOR_SYSTEM_PROMPT = """You are a queries generation agent within a synthetic data generation system.
 
 In the first user message, you will be presented with a single category.
 
-Your task is to generate {n} original, detailed queries directly related to this category.
+Your task is to generate {n} original, concise queries directly related to this category. These queries will be submitted to a large language model. They should present in the form of either a question or a command.
 
 In the output schema, for each query, there is a field for `number`. In the number field, you should write the index of each query in the queries list, beginning with 0. This is to keep track of how many you have generated, so that you end up with exactly {n} queries.
 

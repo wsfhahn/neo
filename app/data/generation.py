@@ -69,6 +69,7 @@ async def run_data_job_concurrent(job: DataJob) -> DataJob:
         else: status = "complete"
         job.status = status
         job.chats = list(chats_dict.values())
+        job.error_detail = error_detail
         return job
     
     assert job.chats is not None

@@ -250,6 +250,7 @@ class Chat(BaseModel):
                 if desired_length is not None and self.length >= desired_length:
                     self.complete = True
                 
+                print("[bold cyan]All done generation!")
                 return output
             except Exception as e:
                 if retry < max_retries:

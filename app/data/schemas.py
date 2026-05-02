@@ -102,6 +102,8 @@ class DataJobRequest(BaseModel):
             max_retries=self.max_retries,
             on_error=self.on_error,
             responses_model_id=self.responses_model_id,
+            follow_up_model_id=self.follow_up_model_id,
+            batch_size=self.batch_size,
             status="pending",
             error_detail=None,
             chats=None

@@ -5,7 +5,7 @@ from app.common.types import JobType
 from app.queries.schemas import QueriesJob
 from app.data.schemas import DataJob
 from app.queries.generation import run_queries_job
-from app.data.generation import run_data_job
+from app.data.generation import run_data_job_concurrent
 
 
 jobs: dict[UUID, JobType] = {}
@@ -25,7 +25,7 @@ async def worker() -> None:
             if isinstance(next_job, QueriesJob):
                 result: JobType = await to_thread(run_queries_job, next_job)
             if isinstance(next_job, DataJob):
-                result = await to_thread(run_data_job, next_job)
+                result = await run_data_job_concurrent(next_job)
             async with job_lock:
                 jobs[next_job_uuid] = result
         except Exception as e:
