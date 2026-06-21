@@ -9,9 +9,12 @@ from app.common.chats import Chat
 
 def run_data_job(job: DataJob) -> DataJob:
     def _to_job(stopped: bool = False) -> DataJob:
-        if stopped: status: JobStatus = "error_stopped"
-        elif error_detail: status = "error_continued"
-        else: status = "complete"
+        if stopped:
+            status: JobStatus = "error_stopped"
+        elif error_detail:
+            status = "error_continued"
+        else:
+            status = "complete"
         return DataJob(
             system_messages=job.system_messages,
             chat_length_max=job.chat_length_max,
@@ -34,9 +37,11 @@ def run_data_job(job: DataJob) -> DataJob:
 
     error_detail: str | None = None
     while True:
-        if all([chat.complete == True for chat in job.chats]): break
+        if all([chat.complete for chat in job.chats]):
+            break
         for i, chat in enumerate(job.chats):
-            if chat.complete: continue
+            if chat.complete:
+                continue
             try:
                 chat.generate(
                     max_retries=job.max_retries,
@@ -56,17 +61,22 @@ def run_data_job(job: DataJob) -> DataJob:
                 error_detail = str(e)
                 chat.complete = True
                 job.chats[i] = chat
-                if job.on_error == "continue": continue
-                elif job.on_error == "stop": return _to_job(stopped=True)
+                if job.on_error == "continue":
+                    continue
+                elif job.on_error == "stop":
+                    return _to_job(stopped=True)
     return _to_job()
 
 
 async def run_data_job_concurrent(job: DataJob) -> DataJob:
     error_detail: str | None = None
     def _finish_job(stopped: bool = False) -> DataJob:
-        if stopped: status: JobStatus = "error_stopped"
-        elif error_detail: status = "error_continued"
-        else: status = "complete"
+        if stopped:
+            status: JobStatus = "error_stopped"
+        elif error_detail:
+            status = "error_continued"
+        else:
+            status = "complete"
         job.status = status
         job.chats = list(chats_dict.values())
         job.error_detail = error_detail
@@ -82,7 +92,7 @@ async def run_data_job_concurrent(job: DataJob) -> DataJob:
 
     while True:
         try:
-            incomplete = {uuid: chat for uuid, chat in chats_dict.items() if chat.complete == False}
+            incomplete = {uuid: chat for uuid, chat in chats_dict.items() if not chat.complete}
             if len(incomplete) == 0:
                 break
             i = 0
@@ -101,7 +111,7 @@ async def run_data_job_concurrent(job: DataJob) -> DataJob:
                 )
                 i += job.batch_size
             
-            incomplete = {uuid: chat for uuid, chat in chats_dict.items() if chat.complete == False}
+            incomplete = {uuid: chat for uuid, chat in chats_dict.items() if not chat.complete}
             i = 0
             while i < len(incomplete):
                 batch = list(incomplete.items())[i:i+job.batch_size]
@@ -119,6 +129,8 @@ async def run_data_job_concurrent(job: DataJob) -> DataJob:
             error_detail = str(e)
             for _, chat in incomplete.items():
                 chat.complete = True
-            if job.on_error == "continue": continue
-            elif job.on_error == "stop": return _finish_job(stopped=True)
+            if job.on_error == "continue":
+                continue
+            elif job.on_error == "stop":
+                return _finish_job(stopped=True)
     return _finish_job(stopped=False)

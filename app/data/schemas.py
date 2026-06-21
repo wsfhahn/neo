@@ -4,7 +4,7 @@ from pydantic import BaseModel, field_validator, model_validator, ValidationErro
 from uuid import UUID
 from typing import Self
 
-from app.common.config import GLOBAL_SETTINGS, GLOBAL_CLIENT
+from app.common.config import GLOBAL_SETTINGS
 from app.data.errors import InvalidDataJobRequest
 from app.common.literals import JobStatus, OnError, SaveFormat
 from app.common.chats import Chat, ChatJSONLEntry

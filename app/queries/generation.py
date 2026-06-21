@@ -6,9 +6,12 @@ from app.common.literals import JobStatus
 
 def run_queries_job(job: QueriesJob) -> QueriesJob:
     def _to_job(stopped: bool = False) -> QueriesJob:
-        if stopped: status: JobStatus = "error_stopped"
-        elif error_detail: status = "error_continued"
-        else: status = "complete"
+        if stopped:
+            status: JobStatus = "error_stopped"
+        elif error_detail:
+            status = "error_continued"
+        else:
+            status = "complete"
         return QueriesJob(
             categories=job.categories,
             queries_per_category=job.queries_per_category,

@@ -102,11 +102,6 @@ class Settings(BaseSettings):
 
     @model_validator(mode='after')
     def validate_cross_fields(self) -> Self:
-        test_client = OpenAI(
-            base_url=self.api_host,
-            api_key=self.api_key
-        )
-
         valid_models = self.get_valid_model_ids()
         
         if self.default_model_id not in valid_models:
@@ -118,7 +113,7 @@ class Settings(BaseSettings):
         return self
     
 
-GLOBAL_SETTINGS = Settings() # type: ignore[call-arg]
+GLOBAL_SETTINGS = Settings() # ty: ignore[missing-argument]
 GLOBAL_CLIENT = OpenAI(
     base_url=GLOBAL_SETTINGS.api_host,
     api_key=GLOBAL_SETTINGS.api_key

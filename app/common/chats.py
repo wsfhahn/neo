@@ -227,8 +227,10 @@ class Chat(BaseModel):
                 reasoning_content = getattr(message, "reasoning_content", None)
                 refusal = message.refusal
 
-                if refusal: raise GenerationError(f"API refused request: {refusal}")
-                if not content: raise GenerationError("API returned empty response content")
+                if refusal:
+                    raise GenerationError(f"API refused request: {refusal}")
+                if not content:
+                    raise GenerationError("API returned empty response content")
 
                 new_message = ChatMessage(
                     role="assistant",
@@ -289,7 +291,8 @@ class Chat(BaseModel):
             response_model=FollowUpResponse
         )
 
-        if append_to_chat: self.add_message(followup.to_chat_message())
+        if append_to_chat:
+            self.add_message(followup.to_chat_message())
         return followup
     
 

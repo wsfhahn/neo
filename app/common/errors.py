@@ -117,7 +117,7 @@ class JobEmptyError(AppError):
         super().__init__(f"The job '{uuid_str}' has no content")
 
 
-def handle_app_error(_: Request, exc: AppError) -> JSONResponse:
+async def handle_app_error(_: Request, exc: AppError) -> JSONResponse:
     return JSONResponse(
         status_code=exc.status_code,
         content={"detail": str(exc)}

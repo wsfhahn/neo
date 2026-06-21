@@ -11,11 +11,15 @@ from app.data.schemas import DataJob
 
 
 def _validate_job(content: str, path_str: str) -> JobType:
-    try: return QueriesJob.model_validate_json(content)
-    except Exception: pass
+    try:
+        return QueriesJob.model_validate_json(content)
+    except Exception:
+        pass
 
-    try: return DataJob.model_validate_json(content)
-    except Exception: pass
+    try:
+        return DataJob.model_validate_json(content)
+    except Exception:
+        pass
 
     raise CorrupedSaveFileError(path_str)
 

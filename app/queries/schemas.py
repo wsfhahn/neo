@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from pydantic import BaseModel, Field, ValidationError, field_validator
 
-from app.common.config import GLOBAL_CLIENT, GLOBAL_SETTINGS
+from app.common.config import GLOBAL_SETTINGS
 from app.common.literals import JobStatus, OnError, SaveFormat
 from app.queries.errors import InvalidQueriesJobRequest
 from app.common.chats import Chat, ChatMessage
@@ -121,7 +121,8 @@ class QueriesJob(QueriesJobRequest):
     result: list[QueriesResponse] | None = None
 
     def to_chats(self, system_messages: list[str] | None = None) -> list[Chat]:
-        if not self.result: return []
+        if not self.result:
+            return []
         chats: list[Chat] = []
         for response in self.result:
             chats.extend(response.to_chats(system_messages=system_messages))

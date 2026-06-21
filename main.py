@@ -24,16 +24,16 @@ from app.common.schemas import (
 
 
 @asynccontextmanager
-async def lifespan(app: FastAPI): # type: ignore[no-untyped-def]
+async def lifespan(app: FastAPI):
     await startup_load_jobs()
-    worker_task = create_task(worker())
+    create_task(worker())
     yield
     await shutdown_save_jobs()
 
 app = FastAPI(
     lifespan=lifespan,
     exception_handlers={
-        AppError: handle_app_error # type: ignore[dict-item]
+        AppError: handle_app_error
     }
 )
 
@@ -56,7 +56,8 @@ async def get_statuses() -> JobStatusesResponse:
 async def register(payload: JobRequestType) -> JobRegisteredResponse:
     job = payload.initialize_job()
     if isinstance(job, DataJob):
-        async with job_lock: queries_job = jobs.get(UUID(job.queries_job_uuid))
+        async with job_lock:
+            queries_job = jobs.get(UUID(job.queries_job_uuid))
         if not queries_job:
             raise JobNotFoundError(job.queries_job_uuid)
         if not isinstance(queries_job, QueriesJob):
@@ -78,23 +79,29 @@ async def register(payload: JobRequestType) -> JobRegisteredResponse:
 
 @app.get("/job/{uuid_str}", response_model=JobType)
 async def get_job(uuid_str: str) -> JobType:
-    try: job_uuid = UUID(uuid_str)
-    except Exception: raise InvalidUUIDError(uuid_str)
+    try:
+        job_uuid = UUID(uuid_str)
+    except Exception:
+        raise InvalidUUIDError(uuid_str)
     
     async with job_lock:
         job = jobs.get(job_uuid)
-    if not job: raise JobNotFoundError(uuid_str)
+    if not job:
+        raise JobNotFoundError(uuid_str)
     return job
 
 
 @app.get("/job/{uuid_str}/save/{format}", response_model=JobRegisteredResponse)
 async def save_job(uuid_str: str, format: SaveFormat) -> JobRegisteredResponse:
-    try: job_uuid = UUID(uuid_str)
-    except Exception: raise InvalidUUIDError(uuid_str)
+    try:
+        job_uuid = UUID(uuid_str)
+    except Exception:
+        raise InvalidUUIDError(uuid_str)
     
     async with job_lock:
         job = jobs.get(job_uuid)
-    if not job: raise JobNotFoundError(uuid_str)
+    if not job:
+        raise JobNotFoundError(uuid_str)
     job.save(uuid_str, format)
 
     return JobRegisteredResponse(
@@ -105,8 +112,10 @@ async def save_job(uuid_str: str, format: SaveFormat) -> JobRegisteredResponse:
 
 @app.get("/job/{uuid_str}/load", response_model=JobRegisteredResponse)
 async def load_job_endpoint(uuid_str: str) -> JobRegisteredResponse:
-    try: job_uuid = UUID(uuid_str)
-    except Exception: raise InvalidUUIDError(uuid_str)
+    try:
+        job_uuid = UUID(uuid_str)
+    except Exception:
+        raise InvalidUUIDError(uuid_str)
     
     await load_and_add_job(job_uuid)
 
